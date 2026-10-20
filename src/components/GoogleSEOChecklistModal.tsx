@@ -11,9 +11,9 @@ import {
   FileCode2,
   Sparkles,
   Layers,
-  HelpCircle,
   Globe,
-  Share2,
+  AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface GoogleSEOChecklistModalProps {
@@ -28,6 +28,10 @@ export const GoogleSEOChecklistModal: React.FC<GoogleSEOChecklistModalProps> = (
   lang,
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [verifyFileName, setVerifyFileName] = useState('');
+  const [verifyContent, setVerifyContent] = useState('');
+  const [verifyStatus, setVerifyStatus] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -37,9 +41,46 @@ export const GoogleSEOChecklistModal: React.FC<GoogleSEOChecklistModalProps> = (
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const handleSaveVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyFileName || !verifyContent) return;
+    setIsSubmitting(true);
+    setVerifyStatus(null);
+    try {
+      const res = await fetch('/api/save-google-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: verifyFileName.trim(),
+          content: verifyContent.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVerifyStatus({
+          success: true,
+          message: isEn
+            ? 'Success! Verification file is now hosted at root. Return to GSC and click "Verify".'
+            : '成功！验证文件已托管至网站根目录。请返回 Google Search Console 点击「验证」。',
+        });
+      } else {
+        setVerifyStatus({
+          success: false,
+          message: data.error || (isEn ? 'Failed to save' : '保存失败'),
+        });
+      }
+    } catch (err: any) {
+      setVerifyStatus({
+        success: false,
+        message: err.message || (isEn ? 'Network error' : '网络请求失败'),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const isEn = lang === 'en';
 
-  // Current domain fallback
   const currentOrigin =
     typeof window !== 'undefined' && window.location.origin
       ? window.location.origin
@@ -60,8 +101,8 @@ export const GoogleSEOChecklistModal: React.FC<GoogleSEOChecklistModalProps> = (
             </h2>
             <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
               {isEn
-                ? 'Everything configured in this codebase to get fast Google crawling, rich snippets, and prepare for AdSense monetization.'
-                : '本项目已全面完成 Google 搜索规范、结构化数据、多语种 hreflang 与收录配置。以下为站长快速上线与赚取流量指引。'}
+                ? 'Fix Google ownership verification instantly and prepare your site for fast indexing and AdSense revenue.'
+                : '一键解决 Google Search Console 验证失败问题，并完成快速收录与广告变现全套配置。'}
             </p>
           </div>
 
@@ -76,16 +117,97 @@ export const GoogleSEOChecklistModal: React.FC<GoogleSEOChecklistModalProps> = (
 
         {/* Content Body */}
         <div className="p-5 sm:p-6 space-y-6 max-h-[75vh] overflow-y-auto text-slate-700 text-sm">
-          {/* Section 1: Pre-configured SEO Checklist */}
+          {/* Section 1: Interactive GSC Verification Fixer (Directly solves user's issue!) */}
+          <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/70 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h3 className="text-xs sm:text-sm font-bold text-amber-900">
+                  {isEn ? 'Fix "Ownership Verification Failed" Error' : '解决 Google Search Console「所有权验证失败 / 验证文件错误」'}
+                </h3>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  {isEn
+                    ? 'In Single Page Apps, Googlebot often receives index.html instead of the verification file. Paste your Google verification details below to host it directly at the root URL.'
+                    : '在单页应用中，爬虫直接访问 HTML 文件常因路由重定向返回 index.html 导致验证失败。在此输入 Google 给您的文件名与内容，系统将为您直接托管！'}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveVerification} className="space-y-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-2xs font-semibold text-amber-900 mb-1">
+                    {isEn ? 'Verification File Name (e.g. google12345.html)' : '验证文件名 (如 google12345.html)'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="googleabcdef123456.html"
+                    value={verifyFileName}
+                    onChange={(e) => setVerifyFileName(e.target.value)}
+                    className="w-full px-3 py-2 bg-white rounded-lg border border-amber-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-2xs font-semibold text-amber-900 mb-1">
+                    {isEn ? 'File Content (e.g. google-site-verification: ...)' : '文件内容 (如 google-site-verification: ...)'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="google-site-verification=..."
+                    value={verifyContent}
+                    onChange={(e) => setVerifyContent(e.target.value)}
+                    className="w-full px-3 py-2 bg-white rounded-lg border border-amber-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>{isSubmitting ? (isEn ? 'Hosting...' : '正在托管...') : (isEn ? 'Host Verification File Instantly' : '一键托管验证文件')}</span>
+                </button>
+                <a
+                  href="https://search.google.com/search-console"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-2xs font-semibold text-blue-600 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>{isEn ? 'Open GSC' : '前往 GSC 验证'}</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              {verifyStatus && (
+                <div
+                  className={`p-2.5 rounded-lg text-xs font-medium flex items-center gap-2 ${
+                    verifyStatus.success
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                      : 'bg-rose-100 text-rose-900 border border-rose-300'
+                  }`}
+                >
+                  {verifyStatus.success ? <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-rose-700 shrink-0" />}
+                  <span>{verifyStatus.message}</span>
+                </div>
+              )}
+            </form>
+          </div>
+
+          {/* Section 2: Built-in SEO Assets */}
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              <span>{isEn ? '1. Built-in Google Indexing Assets' : '1. 本站已内置完成的 Google 收录基础项'}</span>
+              <span>{isEn ? '2. Built-in Google Indexing Assets' : '2. 本站已内置完成的 Google 收录基础项'}</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* robots.txt */}
-              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors">
+              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2 font-semibold text-slate-800 text-xs">
                     <FileCode2 className="w-4 h-4 text-blue-600" />
@@ -100,14 +222,12 @@ export const GoogleSEOChecklistModal: React.FC<GoogleSEOChecklistModalProps> = (
                   </button>
                 </div>
                 <p className="text-xs text-slate-500">
-                  {isEn
-                    ? 'Explicitly permits Googlebot & Googlebot-Image, declares sitemap location.'
-                    : '已开启对 Googlebot 与 Googlebot-Image 爬虫的全站抓取许可，指明 Sitemap 路径。'}
+                  {isEn ? 'Explicitly permits Googlebot & Googlebot-Image.' : '已开放 Googlebot 与 Googlebot-Image 全站爬虫抓取。'}
                 </p>
               </div>
 
               {/* sitemap.xml */}
-              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors">
+              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2 font-semibold text-slate-800 text-xs">
                     <Layers className="w-4 h-4 text-indigo-600" />
@@ -122,148 +242,37 @@ export const GoogleSEOChecklistModal: React.FC<GoogleSEOChecklistModalProps> = (
                   </button>
                 </div>
                 <p className="text-xs text-slate-500">
-                  {isEn
-                    ? 'Includes all anchors, priorities, change frequencies, and bilingual hreflang links.'
-                    : '包含核心计算器、物质表、浮力仿真与双语 hreflang 网页地图，便于 Google 全量索引。'}
-                </p>
-              </div>
-
-              {/* Schema.org Structured Data */}
-              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-2 font-semibold text-slate-800 text-xs mb-1.5">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  <span>Schema.org JSON-LD</span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  {isEn
-                    ? 'Configured with WebApplication, HowTo, FAQPage & BreadcrumbList for rich search result snippets.'
-                    : '集成 WebApplication 评级、HowTo 操作步骤、FAQ 问答与面包屑导航，获取 Google 星级与富媒体卡片展示。'}
-                </p>
-              </div>
-
-              {/* Bilingual Hreflang & OpenGraph */}
-              <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-2 font-semibold text-slate-800 text-xs mb-1.5">
-                  <Globe className="w-4 h-4 text-emerald-600" />
-                  <span>Hreflang &amp; OpenGraph</span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  {isEn
-                    ? 'Default English + Chinese tags, dynamic meta descriptions, and 1200x630 social share banner.'
-                    : '规范中英双语标签、动态 Meta Description、1200x630 社交分享预览图，提升搜索点击率。'}
+                  {isEn ? 'Includes all sections and bilingual hreflang links.' : '包含计算器、物质表、浮力仿真与双语 hreflang 地图。'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Section 2: 3-Step Google Search Console Launch Guide */}
-          <div className="border-t border-slate-200 pt-5">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-3">
+          {/* Section 3: 3-Step Launch & AdSense */}
+          <div className="border-t border-slate-200 pt-5 space-y-4">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Search className="w-5 h-5 text-blue-600" />
-              <span>{isEn ? '2. Three Steps to Get Google Search Indexing' : '2. 快速上线：让 Google 抓取收录三步法'}</span>
+              <span>{isEn ? '3. Indexing & Monetization Roadmap' : '3. 收录与广告变现路线图'}</span>
             </h3>
 
-            <div className="space-y-3">
-              {/* Step 1 */}
-              <div className="flex gap-3 p-3.5 rounded-xl border border-blue-100 bg-blue-50/50">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
-                  1
-                </span>
-                <div className="space-y-1">
-                  <h4 className="font-semibold text-slate-900 text-xs sm:text-sm">
-                    {isEn ? 'Submit to Google Search Console (GSC)' : '在 Google Search Console 添加你的域名或网址'}
-                  </h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    {isEn
-                      ? 'Open Google Search Console, add your domain/URL prefix. Verify via DNS TXT or paste the verification meta tag in index.html.'
-                      : '访问 Google Search Console (GSC)，输入您的正式域名或部署网址。通过 DNS TXT 解析或在 index.html 中填入 Google 验证码即可验证所有权。'}
-                  </p>
-                  <a
-                    href="https://search.google.com/search-console"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 pt-0.5"
-                  >
-                    <span>{isEn ? 'Open Google Search Console' : '前往 Google Search Console 平台'}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="p-3 rounded-xl border border-blue-100 bg-blue-50/50 space-y-1">
+                <div className="font-bold text-blue-900">{isEn ? 'Step 1: Submit Sitemap' : '第一步：提交 Sitemap'}</div>
+                <p className="text-slate-600">
+                  {isEn ? 'Paste sitemap.xml in GSC Sitemaps to queue pages for crawling.' : '在 GSC 提交 sitemap.xml 让 Google 批量排队抓取。'}
+                </p>
               </div>
-
-              {/* Step 2 */}
-              <div className="flex gap-3 p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/50">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
-                  2
-                </span>
-                <div className="space-y-1">
-                  <h4 className="font-semibold text-slate-900 text-xs sm:text-sm">
-                    {isEn ? 'Submit the Sitemap' : '在 GSC 左侧提交 Sitemap 网站地图'}
-                  </h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    {isEn
-                      ? 'Go to "Sitemaps" in GSC sidebar, type "sitemap.xml" and hit Submit. Googlebot will queue all sub-pages for crawling.'
-                      : '在 GSC 左侧菜单点击「站点地图 (Sitemaps)」，输入 sitemap.xml 并点击提交，Google 会自动将计算器所有模块排队抓取。'}
-                  </p>
-                </div>
+              <div className="p-3 rounded-xl border border-indigo-100 bg-indigo-50/50 space-y-1">
+                <div className="font-bold text-indigo-900">{isEn ? 'Step 2: Request Indexing' : '第二步：请求编入索引'}</div>
+                <p className="text-slate-600">
+                  {isEn ? 'Use URL Inspection in GSC on your main URL to get indexed in 24-48h.' : '在 GSC 顶部输入网址点击「测试并请求编入索引」。'}
+                </p>
               </div>
-
-              {/* Step 3 */}
-              <div className="flex gap-3 p-3.5 rounded-xl border border-emerald-100 bg-emerald-50/50">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center">
-                  3
-                </span>
-                <div className="space-y-1">
-                  <h4 className="font-semibold text-slate-900 text-xs sm:text-sm">
-                    {isEn ? 'Request Fast-Track Indexing (URL Inspection)' : '使用「网址检查」点击「请求编入索引」（24~48小时速收录）'}
-                  </h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    {isEn
-                      ? 'In the top search bar of GSC, paste your home URL, let it inspect live URL, and click "Request Indexing". This significantly speeds up initial crawling from weeks to 1–2 days.'
-                      : '在 GSC 顶部搜索框粘贴主页网址，点击「测试实际网址」，随后点击「请求编入索引」。这能将常规数周的自然收录周期压缩至 24~48 小时。'}
-                  </p>
-                  <a
-                    href="https://search.google.com/test/rich-results"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 pt-0.5"
-                  >
-                    <span>{isEn ? 'Run Google Rich Results Test (Verify Schemas)' : '前往 Google 官方富媒体结构化数据检验工具'}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Traffic Monetization with Google AdSense */}
-          <div className="border-t border-slate-200 pt-5">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-3">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
-              <span>{isEn ? '3. Earning Revenue via Google AdSense (流量变现)' : '3. Google AdSense 广告流量变现策略'}</span>
-            </h3>
-
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 space-y-2.5 text-xs text-emerald-900">
-              <p className="font-medium leading-relaxed">
-                {isEn
-                  ? 'Educational & Science utility websites boast high intent and long engagement durations, generating solid RPMs ($3 - $18 per 1,000 pageviews in US/CA/UK/EU).'
-                  : '工具类物理/工程计算器具备极高的用户搜索意图与长停留时间特点。欧美与海外中学生、大学生及工程师搜索流量通常具备较高的广告千次展示收益 (RPM 可达 $3 ~ $18 美元)。'}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 font-mono text-2xs">
-                <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-200">
-                  <div className="text-slate-500 font-sans">{isEn ? 'Stage 1' : '第一阶段'}</div>
-                  <div className="font-bold text-slate-800 text-xs mt-0.5">{isEn ? 'Site Indexed' : 'Google 收录'}</div>
-                  <div className="text-slate-600 mt-1">{isEn ? 'GSC indexing confirmed (1-2 weeks)' : 'GSC 确认页面收录，自然流量爬升'}</div>
-                </div>
-                <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-200">
-                  <div className="text-slate-500 font-sans">{isEn ? 'Stage 2' : '第二阶段'}</div>
-                  <div className="font-bold text-slate-800 text-xs mt-0.5">{isEn ? 'Apply AdSense' : '申请 AdSense'}</div>
-                  <div className="text-slate-600 mt-1">{isEn ? 'Apply at adsense.google.com with custom domain' : '绑定独立域名申请 Google AdSense 审核'}</div>
-                </div>
-                <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-200">
-                  <div className="text-slate-500 font-sans">{isEn ? 'Stage 3' : '第三阶段'}</div>
-                  <div className="font-bold text-slate-800 text-xs mt-0.5">{isEn ? 'Earn Revenue' : '持续被动收益'}</div>
-                  <div className="text-slate-600 mt-1">{isEn ? 'Place responsive banners around calculations' : '在计算结果下方挂载自适应横幅广告'}</div>
-                </div>
+              <div className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/50 space-y-1">
+                <div className="font-bold text-emerald-900">{isEn ? 'Step 3: AdSense Revenue' : '第三步：AdSense 变现'}</div>
+                <p className="text-slate-600">
+                  {isEn ? 'STEM calculator traffic yields high RPM ($3-$18). Apply once indexed.' : '科学计算工具类流量 RPM 较高，收录后即可申请挂载广告。'}
+                </p>
               </div>
             </div>
           </div>
