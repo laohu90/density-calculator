@@ -19,7 +19,7 @@ export default function App() {
       const saved = localStorage.getItem('density_calculator_pref_lang');
       if (saved === 'zh' || saved === 'en') return saved;
     } catch {
-      // ignore
+      // safe fallback if storage is restricted
     }
     return 'en';
   });
@@ -55,6 +55,8 @@ export default function App() {
   };
 
   const handleSelectMaterialForCalc = (sub: Substance) => {
+    setSelectedDensityPreset(sub.density);
+    setCurrentDensity(sub.density);
     setActiveTab('density');
   };
 
@@ -64,13 +66,15 @@ export default function App() {
   };
 
   const handleReset = () => {
+    setSelectedDensityPreset(null);
+    setCurrentDensity(7.87);
     setCalculatorKey((k) => k + 1);
   };
 
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
-        {/* Top Bar Contract (3 zones) */}
+        {/* Unified Top Navigation */}
         <Header
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -81,10 +85,10 @@ export default function App() {
 
         {/* Main Workspace Container */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-          {/* Hero Section / Quiet Kicker */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-slate-200">
+          {/* Hero Section / Quiet Kicker (Decluttered: no duplicate tab row) */}
+          <section className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-slate-200">
             <div>
-              <div className="flex items-center gap-2 text-2xs text-slate-400 font-mono tracking-wider uppercase mb-1">
+              <div className="flex items-center gap-2 text-2xs text-blue-600 font-mono font-bold tracking-wider uppercase mb-1">
                 <span>{t.heroKicker}</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
@@ -95,70 +99,15 @@ export default function App() {
               </p>
             </div>
 
-            {/* Sub-nav Tab Selector */}
-            <div className="flex items-center gap-1 p-1 bg-slate-200/70 rounded-lg overflow-x-auto shrink-0">
-              <button
-                onClick={() => setActiveTab('density')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                  ['density', 'mass', 'volume'].includes(activeTab)
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {t.navCalculator}
-              </button>
-              <button
-                onClick={() => setActiveTab('materials')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                  activeTab === 'materials'
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {t.navMaterials}
-              </button>
-              <button
-                onClick={() => setActiveTab('buoyancy')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                  activeTab === 'buoyancy'
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {t.navBuoyancy}
-              </button>
-              <button
-                onClick={() => setActiveTab('mixture')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                  activeTab === 'mixture'
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {t.navMixture}
-              </button>
-              <button
-                onClick={() => setActiveTab('problems')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                  activeTab === 'problems'
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {t.navProblems}
-              </button>
-              <button
-                onClick={() => setActiveTab('knowledge')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
-                  activeTab === 'knowledge'
-                    ? 'bg-white text-blue-700 shadow-xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {t.navKnowledge}
-              </button>
+            {/* Quick Physics Formula Badges */}
+            <div className="flex items-center gap-2 text-2xs font-mono text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs shrink-0">
+              <span className="font-bold text-blue-700">ρ = m / V</span>
+              <span className="text-slate-300">|</span>
+              <span>m = ρ × V</span>
+              <span className="text-slate-300">|</span>
+              <span>V = m / ρ</span>
             </div>
-          </div>
+          </section>
 
           {/* Active View */}
           {['density', 'mass', 'volume'].includes(activeTab) && (
@@ -173,7 +122,10 @@ export default function App() {
               <DensityScale
                 lang={lang}
                 currentDensity={currentDensity}
-                onSelectDensity={(d) => setSelectedDensityPreset(d)}
+                onSelectDensity={(d) => {
+                  setSelectedDensityPreset(d);
+                  setCurrentDensity(d);
+                }}
               />
             </div>
           )}
@@ -190,6 +142,7 @@ export default function App() {
                 currentDensity={currentDensity}
                 onSelectDensity={(d) => {
                   setSelectedDensityPreset(d);
+                  setCurrentDensity(d);
                   setActiveTab('density');
                 }}
               />
@@ -244,9 +197,9 @@ export default function App() {
                 href="https://github.com/laohu90/density-calculator"
                 target="_blank"
                 rel="noreferrer"
-                className="text-blue-600 hover:underline"
+                className="text-blue-600 hover:underline font-semibold"
               >
-                GitHub
+                GitHub Open Source
               </a>
             </div>
           </div>

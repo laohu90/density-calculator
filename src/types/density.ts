@@ -17,7 +17,9 @@ export interface Substance {
   density: number; // in g/cm³
   densitySI: number; // in kg/m³
   condition: string;
+  conditionEn?: string;
   description: string;
+  descriptionEn?: string;
   color: string;
   isCustom?: boolean;
 }

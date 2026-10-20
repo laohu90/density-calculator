@@ -19,7 +19,7 @@ import {
 import { DEFAULT_SUBSTANCES } from '../data/materials';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 import confetti from 'canvas-confetti';
-import { Copy, Check, Scale, BookOpen, AlertCircle } from 'lucide-react';
+import { Copy, Check, Scale, BookOpen, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface CalculatorProps {
   lang: Language;
@@ -48,6 +48,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
 
   const [precision, setPrecision] = useState<number>(4);
   const [copied, setCopied] = useState<boolean>(false);
+  const [showSteps, setShowSteps] = useState<boolean>(true);
   const [selectedSubstanceName, setSelectedSubstanceName] = useState<string>(
     lang === 'en' ? 'Iron / Steel' : '纯铁 / 纯钢'
   );
@@ -242,7 +243,7 @@ export const Calculator: React.FC<CalculatorProps> = ({
     }
   }, [calculation.densityGcm3, calculation.isValid, onDensityChange]);
 
-  const handleCopySteps = () => {
+  const handleCopySteps = async () => {
     if (!calculation.isValid) return;
     const headerLine = lang === 'en' ? '【Physics Density Derivation Steps】' : '【物理密度计算推导步骤】';
     const text = [
@@ -253,10 +254,25 @@ export const Calculator: React.FC<CalculatorProps> = ({
         : `最终结论: 密度 ρ = ${formatNumber(calculation.densityGcm3)} g/cm³ = ${formatNumber(calculation.si.densitySI)} kg/m³`,
     ].join('\n');
 
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    confetti({ particleCount: 25, spread: 50, origin: { y: 0.8 } });
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      confetti({ particleCount: 20, spread: 45, origin: { y: 0.8 } });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.warn('Copy failed:', err);
+    }
   };
 
   // Find closest matching substance
@@ -509,19 +525,30 @@ export const Calculator: React.FC<CalculatorProps> = ({
             </div>
           </div>
 
-          {/* Derivation Steps Card */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-3">
+          {/* Derivation Steps Card (Collapsible) */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSteps(!showSteps)}
+                className="flex items-center gap-2 text-left group cursor-pointer focus:outline-none"
+              >
                 <BookOpen className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono group-hover:text-blue-600 transition-colors">
                   {t.derivationTitle}
                 </h3>
-              </div>
+                {showSteps ? (
+                  <ChevronUp className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
+                )}
+              </button>
+
               <button
                 onClick={handleCopySteps}
                 disabled={!calculation.isValid}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-2xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-2xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors disabled:opacity-40 cursor-pointer"
+                title={t.copySteps}
               >
                 {copied ? (
                   <>
@@ -537,26 +564,28 @@ export const Calculator: React.FC<CalculatorProps> = ({
               </button>
             </div>
 
-            {calculation.isValid ? (
-              <div className="space-y-2">
-                {calculation.stepRows.map((step, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 bg-slate-50/70 rounded-lg border border-slate-100 flex flex-col sm:flex-row sm:items-baseline gap-2 text-xs"
-                  >
-                    <span className="text-2xs font-mono font-semibold text-indigo-600 min-w-32 shrink-0">
-                      {step.label}
-                    </span>
-                    <span className="font-mono text-slate-800 break-all">
-                      {step.text}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-xs text-slate-400">
-                {t.invalidInputsPrompt}
-              </div>
+            {showSteps && (
+              calculation.isValid ? (
+                <div className="space-y-2 pt-1">
+                  {calculation.stepRows.map((step, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 bg-slate-50/70 rounded-lg border border-slate-100 flex flex-col sm:flex-row sm:items-baseline gap-2 text-xs"
+                    >
+                      <span className="text-2xs font-mono font-semibold text-indigo-600 min-w-32 shrink-0">
+                        {step.label}
+                      </span>
+                      <span className="font-mono text-slate-800 break-all">
+                        {step.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-xs text-slate-400">
+                  {t.invalidInputsPrompt}
+                </div>
+              )
             )}
           </div>
         </div>

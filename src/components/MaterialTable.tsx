@@ -272,9 +272,14 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
                       )}
                     </td>
 
-                    {/* Description */}
-                    <td className="py-2.5 px-4 max-w-xs text-slate-500 truncate" title={sub.description}>
-                      <span>{sub.description}</span>
+                    {/* Description & Condition */}
+                    <td className="py-2.5 px-4 max-w-xs text-slate-500">
+                      <div className="truncate font-sans" title={lang === 'en' && sub.descriptionEn ? sub.descriptionEn : sub.description}>
+                        {lang === 'en' && sub.descriptionEn ? sub.descriptionEn : sub.description}
+                      </div>
+                      <div className="text-slate-400 font-mono text-3xs">
+                        {lang === 'en' && sub.conditionEn ? sub.conditionEn : sub.condition}
+                      </div>
                     </td>
 
                     {/* Actions */}

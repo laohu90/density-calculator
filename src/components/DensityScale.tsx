@@ -1,6 +1,6 @@
 import React from 'react';
 import { Language } from '../i18n/translations';
-import { Compass, MapPin } from 'lucide-react';
+import { Compass, MapPin, Sparkles, Check } from 'lucide-react';
 import { formatNumber } from '../utils/units';
 
 interface DensityScaleProps {
@@ -9,114 +9,185 @@ interface DensityScaleProps {
   onSelectDensity?: (density: number) => void;
 }
 
+interface Milestone {
+  id: string;
+  nameEn: string;
+  nameZh: string;
+  val: string;
+  numVal: number;
+  tagEn: string;
+  tagZh: string;
+  groupEn: string;
+  groupZh: string;
+  isBaseline?: boolean;
+}
+
 export const DensityScale: React.FC<DensityScaleProps> = ({
   lang,
   currentDensity = 7.87,
   onSelectDensity,
 }) => {
-  const ladder = [
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+
+  const ladder: Milestone[] = [
     {
       id: 'h2',
-      name: lang === 'en' ? 'Hydrogen' : '氢气',
+      nameEn: 'Hydrogen (H₂)',
+      nameZh: '氢气 (H₂)',
       val: '0.0000899 g/cm³',
       numVal: 0.0000899,
-      tag: lang === 'en' ? 'Lightest Gas' : '已知最轻气体',
+      tagEn: 'Lightest known gas',
+      tagZh: '已知最轻气体',
+      groupEn: 'Gases',
+      groupZh: '气体',
     },
     {
       id: 'air',
-      name: lang === 'en' ? 'Air (0°C)' : '空气 (0℃)',
+      nameEn: 'Air (0°C, 1 atm)',
+      nameZh: '干燥空气 (0℃)',
       val: '0.001293 g/cm³',
       numVal: 0.001293,
-      tag: lang === 'en' ? 'Atmosphere' : '地球大气',
+      tagEn: 'Atmospheric standard',
+      tagZh: '地球大气基准',
+      groupEn: 'Gases',
+      groupZh: '气体',
     },
     {
       id: 'aerogel',
-      name: lang === 'en' ? 'Aerogel' : '气凝胶',
+      nameEn: 'Silica Aerogel',
+      nameZh: '气凝胶 (冻烟)',
       val: '0.003 g/cm³',
       numVal: 0.003,
-      tag: lang === 'en' ? 'Frozen Smoke' : '超轻固体',
+      tagEn: 'Ultralight solid',
+      tagZh: '超轻固体',
+      groupEn: 'Ultralight Solids',
+      groupZh: '超轻材料',
     },
     {
       id: 'cork',
-      name: lang === 'en' ? 'Cork' : '软木塞',
+      nameEn: 'Cork Wood',
+      nameZh: '软木塞',
       val: '0.24 g/cm³',
       numVal: 0.24,
-      tag: lang === 'en' ? 'Floats on water' : '高浮力木料',
+      tagEn: 'Floats with high buoyancy',
+      tagZh: '高浮力木料',
+      groupEn: 'Floating Solids',
+      groupZh: '浮水固体',
     },
     {
       id: 'ice',
-      name: lang === 'en' ? 'Ice (0°C)' : '冰 (0℃)',
+      nameEn: 'Ice (0°C)',
+      nameZh: '冰 (0℃)',
       val: '0.917 g/cm³',
       numVal: 0.917,
-      tag: lang === 'en' ? '1/11 exposed' : '浮于水面',
+      tagEn: '1/11 exposed on water',
+      tagZh: '浮于水面 (1/11露出)',
+      groupEn: 'Floating Solids',
+      groupZh: '浮水固体',
     },
     {
       id: 'water',
-      name: lang === 'en' ? 'Pure Water (4°C)' : '纯水 (4℃)',
+      nameEn: 'Pure Water (4°C)',
+      nameZh: '纯水 (4℃)',
       val: '1.000 g/cm³',
       numVal: 1.000,
-      tag: lang === 'en' ? 'Physical Standard' : '物理学基准',
+      tagEn: 'Metric & Physics Baseline',
+      tagZh: '国际物理法定基准',
+      groupEn: 'Standard Reference',
+      groupZh: '基准参照',
       isBaseline: true,
     },
     {
       id: 'al',
-      name: lang === 'en' ? 'Aluminum' : '纯铝',
+      nameEn: 'Aluminum (Al)',
+      nameZh: '纯铝 (Al)',
       val: '2.70 g/cm³',
       numVal: 2.70,
-      tag: lang === 'en' ? 'Aerospace light' : '航空轻金属',
+      tagEn: 'Aerospace light metal',
+      tagZh: '航空轻金属',
+      groupEn: 'Metals & Solids',
+      groupZh: '常用金属',
     },
     {
       id: 'fe',
-      name: lang === 'en' ? 'Iron / Steel' : '钢铁 / 纯铁',
+      nameEn: 'Iron / Steel (Fe)',
+      nameZh: '钢铁 / 纯铁 (Fe)',
       val: '7.87 g/cm³',
       numVal: 7.87,
-      tag: lang === 'en' ? 'Industrial base' : '工业基石',
+      tagEn: 'Industrial foundation',
+      tagZh: '工业基石',
+      groupEn: 'Metals & Solids',
+      groupZh: '常用金属',
     },
     {
       id: 'cu',
-      name: lang === 'en' ? 'Copper' : '纯铜',
+      nameEn: 'Copper (Cu)',
+      nameZh: '纯铜 (Cu)',
       val: '8.96 g/cm³',
       numVal: 8.96,
-      tag: lang === 'en' ? 'Conductor' : '优良导体',
+      tagEn: 'High electrical conductor',
+      tagZh: '优良导电金属',
+      groupEn: 'Metals & Solids',
+      groupZh: '常用金属',
     },
     {
       id: 'pb',
-      name: lang === 'en' ? 'Lead (Pb)' : '铅 (Pb)',
+      nameEn: 'Lead (Pb)',
+      nameZh: '金属铅 (Pb)',
       val: '11.34 g/cm³',
       numVal: 11.34,
-      tag: lang === 'en' ? 'Radiation shield' : '辐射防护',
+      tagEn: 'Radiation shielding',
+      tagZh: '防辐射重金属',
+      groupEn: 'Heavy Elements',
+      groupZh: '高密元素',
     },
     {
       id: 'hg',
-      name: lang === 'en' ? 'Mercury' : '水银 / 汞',
+      nameEn: 'Mercury (Hg)',
+      nameZh: '水银 / 汞 (Hg)',
       val: '13.60 g/cm³',
       numVal: 13.60,
-      tag: lang === 'en' ? 'Liquid metal' : '液态金属',
+      tagEn: 'Heavy liquid metal',
+      tagZh: '常温液态金属',
+      groupEn: 'Heavy Elements',
+      groupZh: '高密元素',
     },
     {
       id: 'au',
-      name: lang === 'en' ? 'Pure Gold' : '纯金 (Au)',
+      nameEn: 'Pure Gold (Au)',
+      nameZh: '纯金 (Au)',
       val: '19.32 g/cm³',
       numVal: 19.32,
-      tag: lang === 'en' ? 'Precious metal' : '高密度贵金属',
+      tagEn: 'Dense precious metal',
+      tagZh: '高密度贵金属',
+      groupEn: 'Precious & Rare',
+      groupZh: '贵重金属',
     },
     {
       id: 'os',
-      name: lang === 'en' ? 'Osmium' : '锇 (Os)',
+      nameEn: 'Osmium (Os)',
+      nameZh: '金属锇 (Os)',
       val: '22.59 g/cm³',
       numVal: 22.59,
-      tag: lang === 'en' ? 'Densest element' : '地球最高单质',
+      tagEn: 'Densest natural element',
+      tagZh: '地球密度最高天然单质',
+      groupEn: 'Precious & Rare',
+      groupZh: '贵重金属',
     },
     {
       id: 'neutron',
-      name: lang === 'en' ? 'Neutron Star' : '中子星',
+      nameEn: 'Neutron Star',
+      nameZh: '中子星物质',
       val: '~10¹⁴ g/cm³',
       numVal: 1e14,
-      tag: lang === 'en' ? 'Extreme cosmic' : '每立方厘米亿吨',
+      tagEn: 'Extreme cosmic collapse',
+      tagZh: '极端宇宙天体 (亿吨/cm³)',
+      groupEn: 'Cosmic Extremes',
+      groupZh: '宇宙极端',
     },
   ];
 
-  // Find which item is closest to current calculated density
+  // Find the milestone closest in logarithmic distance to current calculated density
   let closestIdx = -1;
   let minDiff = Infinity;
   if (currentDensity > 0) {
@@ -131,85 +202,154 @@ export const DensityScale: React.FC<DensityScaleProps> = ({
 
   const closestItem = closestIdx >= 0 ? ladder[closestIdx] : null;
 
+  const handleCardClick = (item: Milestone) => {
+    if (onSelectDensity) {
+      onSelectDensity(item.numVal);
+      setCopiedId(item.id);
+      setTimeout(() => setCopiedId(null), 1500);
+    }
+  };
+
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+    <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/90 shadow-xs space-y-4">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <Compass className="w-4 h-4 text-blue-600" />
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
-            {lang === 'en' ? 'Cosmic & Natural Density Spectrum' : '自然宇宙物质密度光谱阶梯'}
-          </h3>
-          <span className="text-2xs text-slate-400 font-mono hidden sm:inline">
-            ({lang === 'en' ? 'From Hydrogen to Neutron Star' : '从氢气到中子星'})
-          </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <Compass className="w-4 h-4 text-blue-600" />
+            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+              {lang === 'en'
+                ? 'Cosmic & Material Density Spectrum'
+                : '自然与宇宙物质密度全景光谱阶梯'}
+            </h3>
+            <span className="text-2xs text-slate-400 font-mono hidden md:inline">
+              (10⁻⁵ → 10¹⁴ g/cm³)
+            </span>
+          </div>
+          <p className="text-xs text-slate-500">
+            {lang === 'en'
+              ? 'Click any milestone material to automatically load its density into the calculator.'
+              : '点击任意阶梯物质，可直接将其标准密度一键导入上方计算器。'}
+          </p>
         </div>
 
         {/* Current position banner */}
         {closestItem && currentDensity > 0 && (
-          <div className="flex items-center gap-1.5 text-2xs font-mono text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100/80">
-            <MapPin className="w-3 h-3 text-blue-600" />
+          <div className="flex items-center gap-2 text-xs font-mono text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 shrink-0">
+            <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0 animate-pulse" />
             <span>
-              {lang === 'en'
-                ? `Current Calculation: ${formatNumber(currentDensity, 3)} g/cm³ ≈ #${closestIdx + 1} ${closestItem.name}`
-                : `当前计算值: ${formatNumber(currentDensity, 3)} g/cm³ · 匹配 #${closestIdx + 1} ${closestItem.name}`}
+              {lang === 'en' ? (
+                <>
+                  Active Value: <strong>{formatNumber(currentDensity, 3)} g/cm³</strong> ≈{' '}
+                  <span className="text-blue-900 font-bold">
+                    #{closestIdx + 1} {closestItem.nameEn}
+                  </span>
+                </>
+              ) : (
+                <>
+                  当前计算值: <strong>{formatNumber(currentDensity, 3)} g/cm³</strong> ≈{' '}
+                  <span className="text-blue-900 font-bold">
+                    #{closestIdx + 1} {closestItem.nameZh}
+                  </span>
+                </>
+              )}
             </span>
           </div>
         )}
       </div>
 
-      {/* Grid of 14 items */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+      {/* Logarithmic Spectrum Bar Visual */}
+      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 space-y-2">
+        <div className="flex items-center justify-between text-2xs font-mono text-slate-500">
+          <span>{lang === 'en' ? 'Ultralight Gases (H₂)' : '超轻气体 (H₂)'}</span>
+          <span className="font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">
+            ★ {lang === 'en' ? 'Water Baseline (1.000 g/cm³)' : '水基准线 (1.000 g/cm³)'}
+          </span>
+          <span>{lang === 'en' ? 'Cosmic Extremes (Neutron Star)' : '宇宙坍缩 (中子星)'}</span>
+        </div>
+
+        {/* Visual Bar with colored zones */}
+        <div className="relative h-2 w-full rounded-full bg-linear-to-r from-sky-200 via-emerald-200 via-amber-200 to-indigo-400 overflow-hidden">
+          {/* Subtle water divider line at ~38% */}
+          <div
+            className="absolute top-0 bottom-0 w-1 bg-cyan-700 shadow-xs z-10"
+            style={{ left: '38%' }}
+            title="Pure Water 1.000 g/cm³"
+          />
+        </div>
+      </div>
+
+      {/* Milestone Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
         {ladder.map((item, idx) => {
           const isCurrentCalculated = idx === closestIdx && currentDensity > 0;
           const isWaterStandard = item.isBaseline;
+          const isCopied = copiedId === item.id;
 
-          let cardStyle = 'border-slate-200/80 bg-slate-50/50 hover:bg-slate-100/60';
+          // Distinct styling: Active match is highlighted in blue, Water baseline is clear cyan reference
+          let cardClasses =
+            'border-slate-200/80 bg-slate-50/60 hover:bg-white hover:border-slate-300 hover:shadow-xs';
           if (isCurrentCalculated) {
-            cardStyle = 'border-blue-500 bg-blue-50/80 ring-1 ring-blue-400 shadow-xs';
+            cardClasses =
+              'border-blue-500 bg-blue-50/90 ring-2 ring-blue-400/60 shadow-xs transform scale-[1.02]';
           } else if (isWaterStandard) {
-            cardStyle = 'border-slate-300 bg-slate-100/60';
+            cardClasses =
+              'border-cyan-300 bg-cyan-50/40 hover:bg-cyan-50/80 hover:border-cyan-400';
           }
 
+          const displayName = lang === 'en' ? item.nameEn : item.nameZh;
+          const displayTag = lang === 'en' ? item.tagEn : item.tagZh;
+
           return (
-            <div
+            <button
+              type="button"
               key={item.id}
-              onClick={() => onSelectDensity && onSelectDensity(item.numVal)}
-              className={`p-2.5 rounded-lg border text-xs flex flex-col justify-between transition-all relative ${cardStyle} ${
-                onSelectDensity ? 'cursor-pointer' : ''
-              }`}
+              onClick={() => handleCardClick(item)}
+              title={
+                lang === 'en'
+                  ? `Click to load ${item.nameEn} (${item.val}) into calculator`
+                  : `点击将 ${item.nameZh} (${item.val}) 导入计算器`
+              }
+              className={`p-3 rounded-lg border text-left flex flex-col justify-between transition-all cursor-pointer relative group focus:outline-none focus:ring-2 focus:ring-blue-500 ${cardClasses}`}
             >
-              {/* Badge for Current Match or Baseline */}
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-slate-400 font-mono text-3xs font-semibold">
+              {/* Card Header: Rank & Status */}
+              <div className="flex items-center justify-between gap-1 mb-1.5 w-full">
+                <span className="text-slate-400 font-mono text-3xs font-bold">
                   #{idx + 1}
                 </span>
-                {isCurrentCalculated ? (
-                  <span className="text-3xs font-bold text-blue-700 bg-blue-100/90 px-1 py-0.2 rounded font-sans">
-                    {lang === 'en' ? '📍 You Are Here' : '📍 当前匹配'}
+
+                {isCopied ? (
+                  <span className="inline-flex items-center gap-0.5 text-3xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                    <Check className="w-2.5 h-2.5" />
+                    {lang === 'en' ? 'Loaded' : '已填入'}
+                  </span>
+                ) : isCurrentCalculated ? (
+                  <span className="inline-flex items-center gap-0.5 text-3xs font-extrabold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded shadow-2xs animate-pulse">
+                    <MapPin className="w-2.5 h-2.5" />
+                    {lang === 'en' ? 'Your Value' : '当前匹配'}
                   </span>
                 ) : isWaterStandard ? (
-                  <span className="text-3xs font-medium text-slate-500 bg-slate-200/70 px-1 py-0.2 rounded font-sans">
-                    {lang === 'en' ? '★ Baseline' : '★ 物理基准'}
+                  <span className="inline-flex items-center gap-0.5 text-3xs font-bold text-cyan-800 bg-cyan-100/90 px-1.5 py-0.5 rounded">
+                    ★ {lang === 'en' ? 'Baseline' : '基准'}
                   </span>
                 ) : null}
               </div>
 
-              {/* Substance Name */}
+              {/* Substance Name & Numeric Density */}
               <div>
-                <span className="font-bold text-slate-900 block text-2xs truncate">
-                  {item.name}
+                <span className="font-bold text-slate-900 block text-xs leading-tight group-hover:text-blue-600 transition-colors">
+                  {displayName}
                 </span>
-                <span className="font-mono text-2xs font-semibold text-slate-700 block mt-0.5">
+                <span className="font-mono text-xs font-bold text-slate-700 block mt-1 tracking-tight">
                   {item.val}
                 </span>
               </div>
 
-              {/* Tag note */}
-              <div className="mt-1.5 pt-1 border-t border-slate-200/60 text-3xs text-slate-500 truncate">
-                {item.tag}
+              {/* Descriptive Tag */}
+              <div className="mt-2 pt-1.5 border-t border-slate-200/50 text-3xs text-slate-500 line-clamp-1">
+                {displayTag}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
