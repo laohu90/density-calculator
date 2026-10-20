@@ -2,7 +2,7 @@ import React from 'react';
 import { CalculationMode } from '../types/density';
 
 interface HeaderProps {
-  activeTab: CalculationMode | 'materials' | 'problems' | 'spectrum';
+  activeTab: CalculationMode | 'materials' | 'problems' | 'spectrum' | 'knowledge';
   setActiveTab: (tab: any) => void;
   onReset: () => void;
 }
@@ -72,6 +72,16 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onReset
             }`}
           >
             典型题解
+          </button>
+          <button
+            onClick={() => setActiveTab('knowledge')}
+            className={`px-3 py-1.5 rounded-md transition-colors whitespace-nowrap shrink-0 ${
+              activeTab === 'knowledge'
+                ? 'text-blue-600 bg-blue-50 font-semibold'
+                : 'hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            物理知识全解
           </button>
         </nav>
 

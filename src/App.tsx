@@ -5,12 +5,13 @@ import { MaterialTable } from './components/MaterialTable';
 import { BuoyancySim } from './components/BuoyancySim';
 import { MixtureCalculator } from './components/MixtureCalculator';
 import { ClassicProblems } from './components/ClassicProblems';
+import { PhysicsKnowledge } from './components/PhysicsKnowledge';
 import { DensityScale } from './components/DensityScale';
 import { Substance, CalculationMode } from './types/density';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<
-    CalculationMode | 'materials' | 'problems' | 'spectrum'
+    CalculationMode | 'materials' | 'problems' | 'spectrum' | 'knowledge'
   >('density');
 
   const [buoyancyTarget, setBuoyancyTarget] = useState<Substance | null>(null);
@@ -110,6 +111,16 @@ export default function App() {
             >
               经典题速算
             </button>
+            <button
+              onClick={() => setActiveTab('knowledge')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 ${
+                activeTab === 'knowledge'
+                  ? 'bg-white text-blue-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              物理知识全解
+            </button>
           </div>
         </div>
 
@@ -147,6 +158,13 @@ export default function App() {
         {activeTab === 'problems' && (
           <div className="space-y-8">
             <ClassicProblems />
+          </div>
+        )}
+
+        {activeTab === 'knowledge' && (
+          <div className="space-y-8">
+            <PhysicsKnowledge />
+            <DensityScale />
           </div>
         )}
       </main>
