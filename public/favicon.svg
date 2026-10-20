@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="liquid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Shield -->
+  <rect width="64" height="64" rx="16" fill="url(#grad)" />
+  
+  <!-- Scale / Flask Balance Symbol -->
+  <!-- Beaker outline -->
+  <path d="M22 14 L42 14 M32 14 L32 20 M20 48 L44 48 C46 48 48 46 47 43 L38 24 L26 24 L17 43 C16 46 18 48 20 48 Z" 
+        fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Liquid layer inside -->
+  <path d="M22 46 L42 46 C43 46 44.5 44.5 44 42 L39.5 32 C37 34 35 34 32 32 C29 30 27 30 24.5 32 L20 42 C19.5 44.5 21 46 22 46 Z" 
+        fill="url(#liquid)" opacity="0.9" />
+
+  <!-- Greek Rho (ρ) symbol overlay badge -->
+  <circle cx="46" cy="46" r="13" fill="#10b981" stroke="#ffffff" stroke-width="2" />
+  <text x="46" y="52" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="14" fill="#ffffff" text-anchor="middle">ρ</text>
+</svg>

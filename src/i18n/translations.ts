@@ -152,8 +152,9 @@ export interface Translations {
   faqTitle: string;
   faqDesc: string;
 
-  // Footer
+  // Footer & Google SEO Guide
   footerDesc: string;
+  seoGuideBtn: string;
 }
 
 export const TRANSLATIONS: Record<Language, Translations> = {
@@ -311,6 +312,7 @@ export const TRANSLATIONS: Record<Language, Translations> = {
 
     // Footer
     footerDesc: 'Designed for STEM education, physics students, and engineering professionals. Fully compliant with International System of Units (SI).',
+    seoGuideBtn: 'Google Indexing & Monetization Playbook',
   },
   zh: {
     // Navigation & Branding
@@ -466,5 +468,6 @@ export const TRANSLATIONS: Record<Language, Translations> = {
 
     // Footer
     footerDesc: '严格遵循国际单位制 (SI) 与中学/大学物理计算标准。适合学生、教师及工程技术人员。',
+    seoGuideBtn: 'Google收录与流量变现指引 (SEO/AdSense)',
   },
 };
