@@ -1,0 +1,7 @@
+# Robots.txt for Density Calculator
+# https://density-calculator.formulacalckit.com/
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://density-calculator.formulacalckit.com/sitemap.xml
