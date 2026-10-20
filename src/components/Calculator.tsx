@@ -658,14 +658,14 @@ export const Calculator: React.FC<CalculatorProps> = ({
                     className={`font-semibold font-mono ${
                       calculation.densityGcm3 < 1.0
                         ? 'text-sky-600'
-                        : calculation.densityGcm3 === 1.0
+                        : Math.abs(calculation.densityGcm3 - 1.0) < 1e-4
                         ? 'text-teal-600'
                         : 'text-amber-600'
                     }`}
                   >
                     {calculation.densityGcm3 < 1.0
                       ? `${t.floatsInWater} (${((1 - calculation.densityGcm3) * 100).toFixed(1)}% exposed)`
-                      : calculation.densityGcm3 === 1.0
+                      : Math.abs(calculation.densityGcm3 - 1.0) < 1e-4
                       ? t.suspendedInWater
                       : `${t.sinksInWater} (${(calculation.densityGcm3).toFixed(2)}× water)`}
                   </span>
