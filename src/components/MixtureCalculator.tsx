@@ -117,8 +117,8 @@ export const MixtureCalculator: React.FC<MixtureCalculatorProps> = ({ lang }) =>
     let totalVolCm3 = 0;
 
     const detailedList = components.map((c) => {
-      const safeMass = Math.max(0, c.massG || 0);
-      const safeDensity = Math.max(0.0001, c.densityGcm3 || 0.0001);
+      const safeMass = Math.max(0, typeof c.massG === 'number' ? c.massG : parseFloat(c.massG) || 0);
+      const safeDensity = Math.max(0.0001, typeof c.densityGcm3 === 'number' ? c.densityGcm3 : parseFloat(c.densityGcm3) || 0.0001);
       const vol = safeMass / safeDensity;
       totalMassG += safeMass;
       totalVolCm3 += vol;
@@ -262,7 +262,7 @@ export const MixtureCalculator: React.FC<MixtureCalculatorProps> = ({ lang }) =>
                           step="any"
                           value={comp.massG}
                           onChange={(e) =>
-                            handleUpdate(comp.id, 'massG', parseFloat(e.target.value) || 0)
+                            handleUpdate(comp.id, 'massG', e.target.value === '' ? '' : parseFloat(e.target.value) || 0)
                           }
                           className="w-full px-2.5 py-1 text-xs font-mono rounded border border-slate-300 bg-white"
                         />
@@ -276,7 +276,7 @@ export const MixtureCalculator: React.FC<MixtureCalculatorProps> = ({ lang }) =>
                           step="any"
                           value={comp.densityGcm3}
                           onChange={(e) =>
-                            handleUpdate(comp.id, 'densityGcm3', parseFloat(e.target.value) || 0.0001)
+                            handleUpdate(comp.id, 'densityGcm3', e.target.value === '' ? '' : parseFloat(e.target.value) || 0)
                           }
                           className="w-full px-2.5 py-1 text-xs font-mono rounded border border-slate-300 bg-white"
                         />
