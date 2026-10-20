@@ -24,9 +24,15 @@ import { Copy, Check, Scale, BookOpen, AlertCircle } from 'lucide-react';
 interface CalculatorProps {
   lang: Language;
   onSelectSubstanceForBuoyancy?: (substance: Substance) => void;
+  onDensityChange?: (densityGcm3: number) => void;
+  selectedDensityPreset?: number | null;
 }
 
-export const Calculator: React.FC<CalculatorProps> = ({ lang }) => {
+export const Calculator: React.FC<CalculatorProps> = ({
+  lang,
+  onDensityChange,
+  selectedDensityPreset,
+}) => {
   const t = TRANSLATIONS[lang];
   const [mode, setMode] = useState<CalculationMode>('density');
 
@@ -45,6 +51,18 @@ export const Calculator: React.FC<CalculatorProps> = ({ lang }) => {
   const [selectedSubstanceName, setSelectedSubstanceName] = useState<string>(
     lang === 'en' ? 'Iron / Steel' : '纯铁 / 纯钢'
   );
+
+  // Apply density preset if selected from external scale
+  React.useEffect(() => {
+    if (selectedDensityPreset && selectedDensityPreset > 0) {
+      const inCurrent = gcm3ToDensity(selectedDensityPreset, densityUnit);
+      setDensityInput(formatNumber(inCurrent, 4));
+      setSelectedSubstanceName(lang === 'en' ? 'Selected Substance' : '已选定物质');
+      if (mode === 'density') {
+        setMode('mass');
+      }
+    }
+  }, [selectedDensityPreset]);
 
   // Quick Material Presets
   const quickSubstances = useMemo(() => {
@@ -217,6 +235,12 @@ export const Calculator: React.FC<CalculatorProps> = ({ lang }) => {
       stepRows,
     };
   }, [mode, massInput, massUnit, volumeInput, volumeUnit, densityInput, densityUnit, precision, lang, t]);
+
+  React.useEffect(() => {
+    if (calculation.isValid && calculation.densityGcm3 > 0 && onDensityChange) {
+      onDensityChange(calculation.densityGcm3);
+    }
+  }, [calculation.densityGcm3, calculation.isValid, onDensityChange]);
 
   const handleCopySteps = () => {
     if (!calculation.isValid) return;

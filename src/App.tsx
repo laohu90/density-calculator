@@ -30,6 +30,8 @@ export default function App() {
 
   const [buoyancyTarget, setBuoyancyTarget] = useState<Substance | null>(null);
   const [calculatorKey, setCalculatorKey] = useState<number>(0);
+  const [currentDensity, setCurrentDensity] = useState<number>(7.87);
+  const [selectedDensityPreset, setSelectedDensityPreset] = useState<number | null>(null);
 
   const t = TRANSLATIONS[lang];
 
@@ -161,8 +163,18 @@ export default function App() {
           {/* Active View */}
           {['density', 'mass', 'volume'].includes(activeTab) && (
             <div className="space-y-6 sm:space-y-8">
-              <Calculator key={calculatorKey} lang={lang} onSelectSubstanceForBuoyancy={handleSimulateBuoyancy} />
-              <DensityScale lang={lang} />
+              <Calculator
+                key={calculatorKey}
+                lang={lang}
+                onDensityChange={(d) => setCurrentDensity(d)}
+                selectedDensityPreset={selectedDensityPreset}
+                onSelectSubstanceForBuoyancy={handleSimulateBuoyancy}
+              />
+              <DensityScale
+                lang={lang}
+                currentDensity={currentDensity}
+                onSelectDensity={(d) => setSelectedDensityPreset(d)}
+              />
             </div>
           )}
 
@@ -173,14 +185,20 @@ export default function App() {
                 onSelectMaterial={handleSelectMaterialForCalc}
                 onSimulateBuoyancy={handleSimulateBuoyancy}
               />
-              <DensityScale lang={lang} />
+              <DensityScale
+                lang={lang}
+                currentDensity={currentDensity}
+                onSelectDensity={(d) => {
+                  setSelectedDensityPreset(d);
+                  setActiveTab('density');
+                }}
+              />
             </div>
           )}
 
           {activeTab === 'buoyancy' && (
             <div className="space-y-6 sm:space-y-8">
               <BuoyancySim lang={lang} initialObject={buoyancyTarget} />
-              <DensityScale lang={lang} />
             </div>
           )}
 
@@ -199,7 +217,6 @@ export default function App() {
           {activeTab === 'knowledge' && (
             <div className="space-y-6 sm:space-y-8">
               <PhysicsKnowledge lang={lang} />
-              <DensityScale lang={lang} />
             </div>
           )}
 
