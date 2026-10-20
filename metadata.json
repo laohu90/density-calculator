@@ -1,6 +1,6 @@
 {
-  "name": "密度计算器 (ρ = m/V)",
-  "description": "专业物理密度在线计算器，内置铁、铝、铜、水、酒精等常用物质密度数据库，支持质量(m)、体积(V)、密度(ρ)三者互求，阿基米德浮力浮沉模拟，全自动国际单位换算与推导步骤详解。",
+  "name": "Density Calculator (ρ = m/V)",
+  "description": "Professional physics density calculator to solve density, mass, and volume (ρ = m/V). Features material density database, Archimedes buoyancy simulation, SI unit converter, and bilingual English/Chinese support.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

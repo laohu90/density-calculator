@@ -17,14 +17,17 @@ import {
   getSIEquivalents,
 } from '../utils/units';
 import { DEFAULT_SUBSTANCES } from '../data/materials';
+import { Language, TRANSLATIONS } from '../i18n/translations';
 import confetti from 'canvas-confetti';
-import { Copy, Check, Sparkles, Scale, Beaker, ArrowRight, BookOpen } from 'lucide-react';
+import { Copy, Check, Scale, BookOpen, AlertCircle } from 'lucide-react';
 
 interface CalculatorProps {
+  lang: Language;
   onSelectSubstanceForBuoyancy?: (substance: Substance) => void;
 }
 
-export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoyancy }) => {
+export const Calculator: React.FC<CalculatorProps> = ({ lang }) => {
+  const t = TRANSLATIONS[lang];
   const [mode, setMode] = useState<CalculationMode>('density');
 
   // Input States
@@ -39,26 +42,39 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
 
   const [precision, setPrecision] = useState<number>(4);
   const [copied, setCopied] = useState<boolean>(false);
-  const [selectedSubstanceName, setSelectedSubstanceName] = useState<string>('铁 (Iron)');
+  const [selectedSubstanceName, setSelectedSubstanceName] = useState<string>(
+    lang === 'en' ? 'Iron / Steel' : '纯铁 / 纯钢'
+  );
 
-  // Selected quick material
+  // Quick Material Presets
+  const quickSubstances = useMemo(() => {
+    return [
+      { id: 'water-4c', nameEn: 'Water (4°C)', nameZh: '纯水 (4℃)', val: 1.0 },
+      { id: 'iron', nameEn: 'Iron / Steel', nameZh: '铁 / 钢', val: 7.87 },
+      { id: 'aluminum', nameEn: 'Aluminum', nameZh: '纯铝', val: 2.7 },
+      { id: 'copper', nameEn: 'Copper', nameZh: '纯铜', val: 8.96 },
+      { id: 'gold', nameEn: 'Gold', nameZh: '黄金', val: 19.32 },
+      { id: 'mercury', nameEn: 'Mercury', nameZh: '水银 / 汞', val: 13.6 },
+      { id: 'alcohol', nameEn: 'Alcohol (Ethanol)', nameZh: '无水酒精', val: 0.789 },
+      { id: 'ice', nameEn: 'Ice (0°C)', nameZh: '冰 (0℃)', val: 0.917 },
+      { id: 'vegetable-oil', nameEn: 'Vegetable Oil', nameZh: '植物油', val: 0.92 },
+      { id: 'glass', nameEn: 'Glass', nameZh: '平板玻璃', val: 2.5 },
+      { id: 'air', nameEn: 'Air (0°C)', nameZh: '空气 (0℃)', val: 0.001293 },
+    ];
+  }, []);
+
   const handleSelectMaterial = (sub: Substance) => {
-    setSelectedSubstanceName(sub.name);
-    // Convert to current densityUnit
+    const displayName = lang === 'en' ? sub.nameEn : sub.name;
+    setSelectedSubstanceName(displayName);
     const inCurrentUnit = gcm3ToDensity(sub.density, densityUnit);
     setDensityInput(formatNumber(inCurrentUnit, 4));
 
-    if (mode === 'mass') {
-      // recalculates mass
-    } else if (mode === 'volume') {
-      // recalculates volume
-    } else {
-      // switch or set values
-      setMode('mass'); // natural next step: given density & volume, find mass
+    if (mode === 'density') {
+      setMode('mass');
     }
   };
 
-  // Perform calculations
+  // Perform Calculations
   const calculation = useMemo(() => {
     const mNum = parseFloat(massInput);
     const vNum = parseFloat(volumeInput);
@@ -73,10 +89,15 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
     const densInGcm3 = !isNaN(dNum) && dNum > 0 ? densityToGcm3(dNum, densityUnit) : 0;
 
     let isValid = false;
+    let errorMsg = '';
     let stepRows: { label: string; text: string }[] = [];
 
     if (mode === 'density') {
-      if (massInG > 0 && volInCm3 > 0) {
+      if (isNaN(mNum) || mNum <= 0) {
+        errorMsg = lang === 'en' ? 'Mass must be greater than 0' : '质量必须大于0';
+      } else if (isNaN(vNum) || vNum <= 0) {
+        errorMsg = lang === 'en' ? 'Volume cannot be zero or negative (division by zero)' : '体积不能为0或负数（除数不能为0）';
+      } else {
         calculatedMassG = massInG;
         calculatedVolumeCm3 = volInCm3;
         calculatedGcm3 = massInG / volInCm3;
@@ -84,29 +105,36 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
 
         stepRows = [
           {
-            label: '已知物理量',
-            text: `质量 m = ${massInput} ${massUnit}，体积 V = ${volumeInput} ${volumeUnit}`,
+            label: t.stepGiven,
+            text:
+              lang === 'en'
+                ? `Mass m = ${massInput} ${massUnit}, Volume V = ${volumeInput} ${volumeUnit}`
+                : `质量 m = ${massInput} ${massUnit}，体积 V = ${volumeInput} ${volumeUnit}`,
           },
           {
-            label: '统一标准单位',
-            text: `m = ${formatNumber(massInG / 1000, 6)} kg, V = ${formatNumber(volInCm3 / 1e6, 8)} m³ (或 m = ${formatNumber(massInG)} g, V = ${formatNumber(volInCm3)} cm³)`,
+            label: t.stepUnits,
+            text: `m = ${formatNumber(massInG)} g (${formatNumber(massInG / 1000, 6)} kg), V = ${formatNumber(volInCm3)} cm³ (${formatNumber(volInCm3 / 1e6, 8)} m³)`,
           },
           {
-            label: '密度基本公式',
-            text: `ρ = m / V`,
+            label: t.stepFormula,
+            text: 'ρ = m / V',
           },
           {
-            label: '代入数值推导',
+            label: t.stepSubstitute,
             text: `ρ = ${formatNumber(massInG)} g / ${formatNumber(volInCm3)} cm³ = ${formatNumber(calculatedGcm3, precision)} g/cm³`,
           },
           {
-            label: '换算为国际单位 (SI)',
-            text: `ρ = ${formatNumber(calculatedGcm3 * 1000, precision)} kg/m³ (1 g/cm³ = 1000 kg/m³)`,
+            label: t.stepResultSI,
+            text: `ρ = ${formatNumber(calculatedGcm3 * 1000, precision)} kg/m³ (1 g/cm³ = 1,000 kg/m³)`,
           },
         ];
       }
     } else if (mode === 'mass') {
-      if (densInGcm3 > 0 && volInCm3 > 0) {
+      if (isNaN(dNum) || dNum <= 0) {
+        errorMsg = lang === 'en' ? 'Density must be greater than 0' : '密度必须大于0';
+      } else if (isNaN(vNum) || vNum <= 0) {
+        errorMsg = lang === 'en' ? 'Volume must be greater than 0' : '体积必须大于0';
+      } else {
         calculatedGcm3 = densInGcm3;
         calculatedVolumeCm3 = volInCm3;
         calculatedMassG = densInGcm3 * volInCm3;
@@ -114,29 +142,36 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
 
         stepRows = [
           {
-            label: '已知物理量',
-            text: `密度 ρ = ${densityInput} ${densityUnit}，体积 V = ${volumeInput} ${volumeUnit}`,
+            label: t.stepGiven,
+            text:
+              lang === 'en'
+                ? `Density ρ = ${densityInput} ${densityUnit}, Volume V = ${volumeInput} ${volumeUnit}`
+                : `密度 ρ = ${densityInput} ${densityUnit}，体积 V = ${volumeInput} ${volumeUnit}`,
           },
           {
-            label: '统一标准单位',
+            label: t.stepUnits,
             text: `ρ = ${formatNumber(densInGcm3)} g/cm³, V = ${formatNumber(volInCm3)} cm³`,
           },
           {
-            label: '公式变形推导',
-            text: `由 ρ = m / V 变形得：m = ρ × V`,
+            label: t.stepFormula,
+            text: 'm = ρ × V',
           },
           {
-            label: '代入数值计算',
+            label: t.stepSubstitute,
             text: `m = ${formatNumber(densInGcm3)} g/cm³ × ${formatNumber(volInCm3)} cm³ = ${formatNumber(calculatedMassG, precision)} g`,
           },
           {
-            label: '换算为所选单位及国际单位',
-            text: `m = ${formatNumber(gramToMass(calculatedMassG, massUnit), precision)} ${massUnit} (国际标准单位: ${formatNumber(calculatedMassG / 1000, precision)} kg)`,
+            label: t.stepResultSI,
+            text: `m = ${formatNumber(gramToMass(calculatedMassG, massUnit), precision)} ${massUnit} (${formatNumber(calculatedMassG / 1000, precision)} kg)`,
           },
         ];
       }
     } else if (mode === 'volume') {
-      if (massInG > 0 && densInGcm3 > 0) {
+      if (isNaN(mNum) || mNum <= 0) {
+        errorMsg = lang === 'en' ? 'Mass must be greater than 0' : '质量必须大于0';
+      } else if (isNaN(dNum) || dNum <= 0) {
+        errorMsg = lang === 'en' ? 'Density cannot be zero or negative' : '密度不能为0或负数';
+      } else {
         calculatedMassG = massInG;
         calculatedGcm3 = densInGcm3;
         calculatedVolumeCm3 = massInG / densInGcm3;
@@ -144,24 +179,27 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
 
         stepRows = [
           {
-            label: '已知物理量',
-            text: `质量 m = ${massInput} ${massUnit}，密度 ρ = ${densityInput} ${densityUnit}`,
+            label: t.stepGiven,
+            text:
+              lang === 'en'
+                ? `Mass m = ${massInput} ${massUnit}, Density ρ = ${densityInput} ${densityUnit}`
+                : `质量 m = ${massInput} ${massUnit}，密度 ρ = ${densityInput} ${densityUnit}`,
           },
           {
-            label: '统一标准单位',
+            label: t.stepUnits,
             text: `m = ${formatNumber(massInG)} g, ρ = ${formatNumber(densInGcm3)} g/cm³`,
           },
           {
-            label: '公式变形推导',
-            text: `由 ρ = m / V 变形得：V = m / ρ`,
+            label: t.stepFormula,
+            text: 'V = m / ρ',
           },
           {
-            label: '代入数值计算',
+            label: t.stepSubstitute,
             text: `V = ${formatNumber(massInG)} g / ${formatNumber(densInGcm3)} g/cm³ = ${formatNumber(calculatedVolumeCm3, precision)} cm³`,
           },
           {
-            label: '换算为所选单位及国际单位',
-            text: `V = ${formatNumber(cm3ToVolume(calculatedVolumeCm3, volumeUnit), precision)} ${volumeUnit} (国际标准单位: ${formatNumber(calculatedVolumeCm3 / 1e6, precision + 2)} m³)`,
+            label: t.stepResultSI,
+            text: `V = ${formatNumber(cm3ToVolume(calculatedVolumeCm3, volumeUnit), precision)} ${volumeUnit} (${formatNumber(calculatedVolumeCm3 / 1e6, precision + 2)} m³)`,
           },
         ];
       }
@@ -171,26 +209,29 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
 
     return {
       isValid,
+      errorMsg,
       densityGcm3: calculatedGcm3,
       massG: calculatedMassG,
       volumeCm3: calculatedVolumeCm3,
       si,
       stepRows,
     };
-  }, [mode, massInput, massUnit, volumeInput, volumeUnit, densityInput, densityUnit, precision]);
+  }, [mode, massInput, massUnit, volumeInput, volumeUnit, densityInput, densityUnit, precision, lang, t]);
 
-  // Copy derivation text
   const handleCopySteps = () => {
     if (!calculation.isValid) return;
+    const headerLine = lang === 'en' ? '【Physics Density Derivation Steps】' : '【物理密度计算推导步骤】';
     const text = [
-      `【物理密度计算推导步骤】`,
+      headerLine,
       ...calculation.stepRows.map((s) => `${s.label}: ${s.text}`),
-      `最终结论: 密度 ρ = ${formatNumber(calculation.densityGcm3)} g/cm³ = ${formatNumber(calculation.si.densitySI)} kg/m³`,
+      lang === 'en'
+        ? `Result: Density ρ = ${formatNumber(calculation.densityGcm3)} g/cm³ = ${formatNumber(calculation.si.densitySI)} kg/m³`
+        : `最终结论: 密度 ρ = ${formatNumber(calculation.densityGcm3)} g/cm³ = ${formatNumber(calculation.si.densitySI)} kg/m³`,
     ].join('\n');
 
     navigator.clipboard.writeText(text);
     setCopied(true);
-    confetti({ particleCount: 30, spread: 60, origin: { y: 0.8 } });
+    confetti({ particleCount: 25, spread: 50, origin: { y: 0.8 } });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -210,65 +251,67 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
     return {
       substance: closest,
       diffPct,
-      isVeryClose: diffPct < 5,
+      name: lang === 'en' ? closest.nameEn : closest.name,
     };
-  }, [calculation.densityGcm3, calculation.isValid]);
+  }, [calculation.densityGcm3, calculation.isValid, lang]);
 
   return (
     <div className="space-y-6">
-      {/* Mode Selector - Clean Segmented Control */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2">
+      {/* Target Selector & Precision Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">
-            计算目标
+            {t.calcTarget}
           </span>
           <div className="flex items-center p-1 bg-slate-100 rounded-lg">
             <button
               onClick={() => setMode('density')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
                 mode === 'density'
-                  ? 'bg-white text-blue-700 shadow-sm font-semibold'
+                  ? 'bg-white text-blue-700 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              求密度 (ρ = m/V)
+              {t.targetDensity}
             </button>
             <button
               onClick={() => setMode('mass')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
                 mode === 'mass'
-                  ? 'bg-white text-blue-700 shadow-sm font-semibold'
+                  ? 'bg-white text-blue-700 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              求质量 (m = ρ·V)
+              {t.targetMass}
             </button>
             <button
               onClick={() => setMode('volume')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
                 mode === 'volume'
-                  ? 'bg-white text-blue-700 shadow-sm font-semibold'
+                  ? 'bg-white text-blue-700 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              求体积 (V = m/ρ)
+              {t.targetVolume}
             </button>
           </div>
         </div>
 
         {/* Precision Setting */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-medium">保留小数</span>
+          <span className="text-xs text-slate-500 font-medium">{t.precision}</span>
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-md">
             {[2, 3, 4, 6].map((p) => (
               <button
                 key={p}
                 onClick={() => setPrecision(p)}
                 className={`px-2 py-0.5 text-xs font-mono rounded ${
-                  precision === p ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  precision === p
+                    ? 'bg-white text-slate-900 font-bold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                {p}位
+                {p}
               </button>
             ))}
           </div>
@@ -277,131 +320,136 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
 
       {/* Main Calculation Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Input Parameters & Presets (7 cols) */}
+        {/* Left Column: Parameter Inputs (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Scale className="w-5 h-5 text-blue-600" />
-                输入已知物理参数
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Scale className="w-4 h-4 text-blue-600" />
+                <span>{t.inputParameters}</span>
               </h2>
-              <span className="text-xs text-slate-400 font-mono">
-                自动同步国际单位制 (SI)
+              <span className="text-2xs text-slate-400 font-mono">
+                {t.siAutoSync}
               </span>
             </div>
 
-            {/* Mass Input (Visible in density & volume mode) */}
+            {/* Error prompt if invalid */}
+            {!calculation.isValid && calculation.errorMsg && (
+              <div className="p-3 bg-rose-50 rounded-lg border border-rose-100 flex items-center gap-2 text-xs text-rose-700 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{calculation.errorMsg}</span>
+              </div>
+            )}
+
+            {/* Mass Input */}
             {mode !== 'mass' && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                    <span>物体的质量 (m)</span>
-                    <span className="text-xs font-normal text-slate-400 font-mono">[Mass]</span>
+                  <label className="text-xs font-semibold text-slate-700">
+                    {t.massLabel}
                   </label>
-                  <span className="text-xs font-mono text-slate-500">
-                    SI基准: {formatNumber(massToGram(parseFloat(massInput) || 0, massUnit) / 1000, 5)} kg
+                  <span className="text-2xs font-mono text-slate-400">
+                    {t.siBase}: {formatNumber(massToGram(parseFloat(massInput) || 0, massUnit) / 1000, 5)} kg
                   </span>
                 </div>
-                <div className="flex rounded-lg shadow-xs">
+                <div className="flex rounded-lg shadow-2xs">
                   <input
                     type="number"
                     step="any"
                     value={massInput}
                     onChange={(e) => setMassInput(e.target.value)}
-                    placeholder="输入质量数值"
-                    className="block w-full rounded-l-lg border-y border-l border-slate-300 px-3.5 py-2.5 text-slate-900 text-lg font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder={t.massPlaceholder}
+                    className="block w-full rounded-l-lg border-y border-l border-slate-300 px-3.5 py-2 text-slate-900 text-base font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                   />
                   <select
                     value={massUnit}
                     onChange={(e) => setMassUnit(e.target.value as MassUnit)}
-                    className="rounded-r-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
+                    className="rounded-r-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
                   >
-                    <option value="g">克 (g)</option>
-                    <option value="kg">千克 (kg - SI)</option>
-                    <option value="mg">毫克 (mg)</option>
-                    <option value="t">吨 (t)</option>
-                    <option value="lb">磅 (lb)</option>
-                    <option value="oz">盎司 (oz)</option>
+                    <option value="g">g (gram)</option>
+                    <option value="kg">kg (SI base)</option>
+                    <option value="mg">mg (milligram)</option>
+                    <option value="t">t (metric ton)</option>
+                    <option value="lb">lb (pound)</option>
+                    <option value="oz">oz (ounce)</option>
                   </select>
                 </div>
               </div>
             )}
 
-            {/* Volume Input (Visible in density & mass mode) */}
+            {/* Volume Input */}
             {mode !== 'volume' && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                    <span>物体的体积 (V)</span>
-                    <span className="text-xs font-normal text-slate-400 font-mono">[Volume]</span>
+                  <label className="text-xs font-semibold text-slate-700">
+                    {t.volumeLabel}
                   </label>
-                  <span className="text-xs font-mono text-slate-500">
-                    SI基准: {formatNumber(volumeToCm3(parseFloat(volumeInput) || 0, volumeUnit) / 1e6, 7)} m³
+                  <span className="text-2xs font-mono text-slate-400">
+                    {t.siBase}: {formatNumber(volumeToCm3(parseFloat(volumeInput) || 0, volumeUnit) / 1e6, 7)} m³
                   </span>
                 </div>
-                <div className="flex rounded-lg shadow-xs">
+                <div className="flex rounded-lg shadow-2xs">
                   <input
                     type="number"
                     step="any"
                     value={volumeInput}
                     onChange={(e) => setVolumeInput(e.target.value)}
-                    placeholder="输入体积数值"
-                    className="block w-full rounded-l-lg border-y border-l border-slate-300 px-3.5 py-2.5 text-slate-900 text-lg font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder={t.volumePlaceholder}
+                    className="block w-full rounded-l-lg border-y border-l border-slate-300 px-3.5 py-2 text-slate-900 text-base font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                   />
                   <select
                     value={volumeUnit}
                     onChange={(e) => setVolumeUnit(e.target.value as VolumeUnit)}
-                    className="rounded-r-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
+                    className="rounded-r-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
                   >
-                    <option value="cm³">立方厘米 (cm³)</option>
-                    <option value="m³">立方米 (m³ - SI)</option>
-                    <option value="dm³">立方分米 (dm³)</option>
-                    <option value="L">升 (L)</option>
-                    <option value="mL">毫升 (mL)</option>
-                    <option value="mm³">立方毫米 (mm³)</option>
-                    <option value="ft³">立方英尺 (ft³)</option>
-                    <option value="in³">立方英寸 (in³)</option>
-                    <option value="gal">美制加仑 (gal)</option>
+                    <option value="cm³">cm³ (cubic centimeter)</option>
+                    <option value="m³">m³ (SI base)</option>
+                    <option value="dm³">dm³ (cubic decimeter)</option>
+                    <option value="L">L (liter)</option>
+                    <option value="mL">mL (milliliter)</option>
+                    <option value="mm³">mm³</option>
+                    <option value="ft³">ft³ (cubic foot)</option>
+                    <option value="in³">in³ (cubic inch)</option>
+                    <option value="gal">gal (US gallon)</option>
                   </select>
                 </div>
               </div>
             )}
 
-            {/* Density Input (Visible in mass & volume mode) */}
+            {/* Density Input */}
             {mode !== 'density' && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                    <span>物质的密度 (ρ)</span>
-                    <span className="text-xs font-normal text-slate-400 font-mono">[Density]</span>
+                  <label className="text-xs font-semibold text-slate-700">
+                    {t.densityLabel}
                   </label>
-                  <span className="text-xs font-mono text-slate-500">
-                    SI基准: {formatNumber(densityToGcm3(parseFloat(densityInput) || 0, densityUnit) * 1000, 4)} kg/m³
+                  <span className="text-2xs font-mono text-slate-400">
+                    {t.siBase}: {formatNumber(densityToGcm3(parseFloat(densityInput) || 0, densityUnit) * 1000, 4)} kg/m³
                   </span>
                 </div>
-                <div className="flex rounded-lg shadow-xs">
+                <div className="flex rounded-lg shadow-2xs">
                   <input
                     type="number"
                     step="any"
                     value={densityInput}
                     onChange={(e) => {
                       setDensityInput(e.target.value);
-                      setSelectedSubstanceName('自定义物质');
+                      setSelectedSubstanceName(t.customMaterial);
                     }}
-                    placeholder="输入密度数值"
-                    className="block w-full rounded-l-lg border-y border-l border-slate-300 px-3.5 py-2.5 text-slate-900 text-lg font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder={t.densityPlaceholder}
+                    className="block w-full rounded-l-lg border-y border-l border-slate-300 px-3.5 py-2 text-slate-900 text-base font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                   />
                   <select
                     value={densityUnit}
                     onChange={(e) => setDensityUnit(e.target.value as DensityUnit)}
-                    className="rounded-r-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
+                    className="rounded-r-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-none cursor-pointer"
                   >
-                    <option value="g/cm³">g/cm³ (克/立方厘米)</option>
-                    <option value="kg/m³">kg/m³ (千克/立方米 - SI)</option>
-                    <option value="g/mL">g/mL (克/毫升)</option>
-                    <option value="kg/L">kg/L (千克/升)</option>
-                    <option value="lb/ft³">lb/ft³ (磅/立方英尺)</option>
-                    <option value="lb/in³">lb/in³ (磅/立方英寸)</option>
+                    <option value="g/cm³">g/cm³</option>
+                    <option value="kg/m³">kg/m³ (SI base)</option>
+                    <option value="g/mL">g/mL</option>
+                    <option value="kg/L">kg/L</option>
+                    <option value="lb/ft³">lb/ft³</option>
+                    <option value="lb/in³">lb/in³</option>
                   </select>
                 </div>
               </div>
@@ -410,38 +458,26 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
             {/* Quick Material Presets */}
             <div className="pt-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-600">
-                  常用物质密度一键填入:
+                <span className="text-2xs font-semibold text-slate-500 uppercase tracking-wider font-mono">
+                  {t.quickFill}
                 </span>
-                <span className="text-xs text-blue-600 font-medium">
-                  当前设定: {selectedSubstanceName}
+                <span className="text-2xs text-blue-600 font-medium">
+                  {t.currentPreset}: {selectedSubstanceName}
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {[
-                  { name: '纯水', id: 'water-4c', val: 1.0 },
-                  { name: '铁/纯钢', id: 'iron', val: 7.87 },
-                  { name: '铝', id: 'aluminum', val: 2.7 },
-                  { name: '纯铜', id: 'copper', val: 8.96 },
-                  { name: '纯金', id: 'gold', val: 19.32 },
-                  { name: '水银', id: 'mercury', val: 13.6 },
-                  { name: '酒精', id: 'alcohol', val: 0.789 },
-                  { name: '冰(0℃)', id: 'ice', val: 0.917 },
-                  { name: '植物油', id: 'vegetable-oil', val: 0.92 },
-                  { name: '玻璃', id: 'glass', val: 2.5 },
-                  { name: '橡木', id: 'oak-wood', val: 0.75 },
-                  { name: '空气(0℃)', id: 'air', val: 0.001293 },
-                ].map((item) => {
+                {quickSubstances.map((item) => {
                   const targetSub = DEFAULT_SUBSTANCES.find((s) => s.id === item.id);
+                  const label = lang === 'en' ? item.nameEn : item.nameZh;
                   return (
                     <button
                       key={item.id}
                       onClick={() => {
                         if (targetSub) handleSelectMaterial(targetSub);
                       }}
-                      className="px-2.5 py-1 text-xs font-medium rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition-colors border border-slate-200/80"
+                      className="px-2 py-1 text-xs font-medium rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition-colors border border-slate-200/60"
                     >
-                      {item.name} ({item.val} g/cm³)
+                      {label} ({item.val} g/cm³)
                     </button>
                   );
                 })}
@@ -449,80 +485,73 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
             </div>
           </div>
 
-          {/* Detailed Physics Derivation Card */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          {/* Derivation Steps Card */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-base font-bold text-slate-900">
-                  完整物理公式与推导步骤详解
+                <BookOpen className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
+                  {t.derivationTitle}
                 </h3>
               </div>
               <button
                 onClick={handleCopySteps}
                 disabled={!calculation.isValid}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-2xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors disabled:opacity-40"
               >
                 {copied ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>已复制</span>
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span>{t.copied}</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>复制步骤</span>
+                    <Copy className="w-3 h-3" />
+                    <span>{t.copySteps}</span>
                   </>
                 )}
               </button>
             </div>
 
             {calculation.isValid ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {calculation.stepRows.map((step, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-slate-50/70 rounded-lg border border-slate-100 flex flex-col sm:flex-row sm:items-baseline gap-2"
+                    className="p-2.5 bg-slate-50/70 rounded-lg border border-slate-100 flex flex-col sm:flex-row sm:items-baseline gap-2 text-xs"
                   >
-                    <span className="text-xs font-mono font-semibold text-indigo-600 min-w-32 shrink-0">
-                      步骤 {idx + 1} · {step.label}
+                    <span className="text-2xs font-mono font-semibold text-indigo-600 min-w-32 shrink-0">
+                      {step.label}
                     </span>
-                    <span className="text-sm font-mono text-slate-800 break-all">
+                    <span className="font-mono text-slate-800 break-all">
                       {step.text}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-sm text-slate-400">
-                请输入有效的正数质量与体积数值以生成推导步骤
+              <div className="text-center py-6 text-xs text-slate-400">
+                {t.invalidInputsPrompt}
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Column: Output Card & Visual Comparison (5 cols) */}
+        {/* Right Column: Output Card (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Main Result Card */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/70 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
-
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs relative overflow-hidden">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">
-                计算求解结果
+              <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 font-mono">
+                {t.calcResultTitle}
               </span>
-              <span className="text-xs font-mono text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded">
-                计算完成
+              <span className="text-2xs font-mono text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">
+                {t.calcCompleted}
               </span>
             </div>
 
             <div className="my-5">
-              <span className="text-xs font-semibold text-slate-500 uppercase font-mono">
-                {mode === 'density'
-                  ? '求得密度 (ρ)'
-                  : mode === 'mass'
-                  ? '求得质量 (m)'
-                  : '求得体积 (V)'}
+              <span className="text-xs font-semibold text-slate-500 font-mono">
+                {mode === 'density' ? t.densityResult : mode === 'mass' ? t.massResult : t.volumeResult}
               </span>
 
               <div className="flex items-baseline gap-2 mt-1">
@@ -539,27 +568,27 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
               </div>
             </div>
 
-            {/* International Standard SI Unit Output */}
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">国际标准单位 (SI)</span>
-                <span className="text-xs text-slate-400 font-mono">kg, m³, kg/m³</span>
+            {/* Standard SI Unit Output */}
+            <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200/80 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700">{t.siOutputTitle}</span>
+                <span className="text-slate-400 font-mono text-2xs">kg, m³, kg/m³</span>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-xs">
                 <div>
-                  <span className="text-slate-400 block">密度 ρ</span>
+                  <span className="text-slate-400 block text-2xs">ρ (SI)</span>
                   <span className="font-bold text-slate-900 tabular-nums">
                     {formatNumber(calculation.si.densitySI, precision)} kg/m³
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block">质量 m</span>
+                  <span className="text-slate-400 block text-2xs">m (SI)</span>
                   <span className="font-bold text-slate-900 tabular-nums">
                     {formatNumber(calculation.si.massSI, precision)} kg
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block">体积 V</span>
+                  <span className="text-slate-400 block text-2xs">V (SI)</span>
                   <span className="font-bold text-slate-900 tabular-nums">
                     {formatNumber(calculation.si.volumeSI, precision + 2)} m³
                   </span>
@@ -567,11 +596,11 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
               </div>
             </div>
 
-            {/* Physical Characteristics & Water Floating Assessment */}
+            {/* Water Buoyancy Assessment */}
             {calculation.isValid && calculation.densityGcm3 > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">水中的浮沉状态:</span>
+              <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">{t.waterFloatStatus}:</span>
                   <span
                     className={`font-semibold font-mono ${
                       calculation.densityGcm3 < 1.0
@@ -582,18 +611,18 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
                     }`}
                   >
                     {calculation.densityGcm3 < 1.0
-                      ? `漂浮 (露出率 ${formatNumber((1 - calculation.densityGcm3) * 100, 1)}%)`
+                      ? `${t.floatsInWater} (${((1 - calculation.densityGcm3) * 100).toFixed(1)}% exposed)`
                       : calculation.densityGcm3 === 1.0
-                      ? '悬浮在水中'
-                      : `沉底 (密度比水大 ${formatNumber(calculation.densityGcm3, 2)}倍)`}
+                      ? t.suspendedInWater
+                      : `${t.sinksInWater} (${(calculation.densityGcm3).toFixed(2)}× water)`}
                   </span>
                 </div>
 
                 {closestSubstance && (
-                  <div className="text-xs p-2.5 bg-blue-50/50 rounded-lg border border-blue-100/60 flex items-center justify-between">
-                    <span className="text-slate-600">最接近的天然常见物质:</span>
+                  <div className="text-2xs p-2 bg-blue-50/50 rounded-lg border border-blue-100 flex items-center justify-between">
+                    <span className="text-slate-600">{t.closestMaterial}:</span>
                     <span className="font-bold text-blue-700">
-                      {closestSubstance.substance.name} ({closestSubstance.substance.density} g/cm³)
+                      {closestSubstance.name} ({closestSubstance.substance.density} g/cm³)
                     </span>
                   </div>
                 )}
@@ -601,26 +630,26 @@ export const Calculator: React.FC<CalculatorProps> = ({ onSelectSubstanceForBuoy
             )}
           </div>
 
-          {/* Unit Equivalents Matrix */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
-              常用单位换算速查表
+          {/* Quick Equivalents Table */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2">
+            <h4 className="text-2xs font-bold uppercase tracking-wider text-slate-400 font-mono">
+              {t.conversionMatrix}
             </h4>
             <div className="divide-y divide-slate-100 text-xs font-mono">
               <div className="py-2 flex justify-between items-center">
-                <span className="text-slate-600">1 g/cm³</span>
-                <span className="font-semibold text-slate-900">= 1,000 kg/m³ = 1 g/mL = 1 kg/L</span>
+                <span className="text-slate-500">1 g/cm³</span>
+                <span className="font-semibold text-slate-900">= 1,000 kg/m³ = 1 g/mL</span>
               </div>
               <div className="py-2 flex justify-between items-center">
-                <span className="text-slate-600">1 g/cm³ (英制)</span>
+                <span className="text-slate-500">1 g/cm³ (Imperial)</span>
                 <span className="font-semibold text-slate-900">= 62.428 lb/ft³ ≈ 0.0361 lb/in³</span>
               </div>
               <div className="py-2 flex justify-between items-center">
-                <span className="text-slate-600">1 m³</span>
-                <span className="font-semibold text-slate-900">= 1,000 dm³ = 1,000 L = 10⁶ cm³</span>
+                <span className="text-slate-500">1 m³</span>
+                <span className="font-semibold text-slate-900">= 1,000 L = 1,000 dm³ = 10⁶ cm³</span>
               </div>
               <div className="py-2 flex justify-between items-center">
-                <span className="text-slate-600">1 kg</span>
+                <span className="text-slate-500">1 kg</span>
                 <span className="font-semibold text-slate-900">= 1,000 g = 10⁶ mg = 0.001 t</span>
               </div>
             </div>

@@ -1,6 +1,6 @@
-# 密度计算器 (ρ = m/V) · 物理科学在线计算与物质密度表 (Density Calculator)
+# Density Calculator (ρ = m/V) · 密度计算器与常用物质密度表
 
-> 🔬 **初高中物理与工程科学经典工具** · 质量 $m$、体积 $V$、密度 $\rho$ 三者互求 · 内置铁/铝/铜/水/酒精等30+常用物质密度常数表 · 国际标准单位 (SI) 全自动互换 · 阿基米德浮力浮沉动态仿真 · 合金混合密度与典型题速算
+> 🔬 **Interactive Physics Calculator & Material Density Database** · Solve for density $\rho$, mass $m$, or volume $V$ ($\rho = m/V$) · Built-in 30+ scientifically verified substance densities (Iron, Aluminum, Copper, Water, Alcohol, Gold, etc.) · Automatic SI unit conversion · Archimedes buoyancy & equilibrium simulation · Multi-component alloy density · Classic physics problem solvers · Fully bilingual (English / 中文).
 
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue)
@@ -10,109 +10,76 @@
 
 ---
 
-## 🌟 核心特色与功能
+## 🌟 Key Features (核心特色与功能)
 
-在物理学习与工程实践中，**密度公式 $\rho = \frac{m}{V}$ 是质量与几何体积之间的核心纽带**。然而，学生和工程技术人员经常在**单位换算**（如 $\text{g/cm}^3$ 与 $\text{kg/m}^3$ 之间的 1000 倍关系、$\text{cm}^3$ 与 $\text{m}^3$ 之间的 $10^6$ 倍关系）、**公式变形推导**、**阿基米德浮沉受力分析**以及**合金与混合物密度**上遇到计算困扰。
+In STEM education and engineering practice, **$\rho = m/V$ is the fundamental bridge connecting an object's mass with its geometric volume**. 
 
-本项目针对上述痛点，构建了专业、精确、直观的物理密度综合计算平台：
+This web application delivers a clean, resilient, and professional calculation platform designed for students, teachers, researchers, and engineers:
 
----
+### 1. Three-Way Variable Solving ($\rho = m/V, m = \rho \cdot V, V = m/\rho$)
+- **Solve for Density**: $\rho = m / V$
+- **Solve for Mass**: $m = \rho \times V$
+- **Solve for Volume**: $V = m / \rho$
+- **Full Physics Derivation Output**: Formats steps (Given $\to$ Unit Normalization $\to$ Formula $\to$ Substitution $\to$ SI Results) with **One-Click Copy**.
+- **Adjustable Significant Figures**: Choose between 2, 3, 4, or 6 decimal places.
+- **Division-by-Zero Protection**: Input validation prevents zero or negative volume errors.
 
-### 1. 三者自由互求与规范解题步骤
+### 2. Automatic SI & Engineering Unit Conversions
+- **Density Units**: $\text{g/cm}^3$, $\text{kg/m}^3$ (SI Base), $\text{g/mL}$, $\text{kg/L}$, $\text{lb/ft}^3$, $\text{lb/in}^3$.
+  - Conversion rule: $1\text{ g/cm}^3 = 1,000\text{ kg/m}^3 = 1\text{ g/mL} = 1\text{ kg/L} \approx 62.428\text{ lb/ft}^3$.
+- **Mass Units**: $\text{g}$, $\text{kg}$ (SI Base), $\text{mg}$, $\text{t}$ (metric ton), $\text{lb}$, $\text{oz}$.
+- **Volume Units**: $\text{cm}^3$, $\text{m}^3$ (SI Base), $\text{dm}^3$, $\text{L}$, $\text{mL}$, $\text{mm}^3$, $\text{ft}^3$, $\text{in}^3$, $\text{gal}$ (US).
 
-- **求密度**：$\rho = \frac{m}{V}$
-- **求质量**：$m = \rho \times V$
-- **求体积**：$V = \frac{m}{\rho}$
-- **完整推导步骤**：自动输出规范步骤（【已知物理量】$\to$【统一单位】$\to$【公式变形】$\to$【代入数值】$\to$【结论与国际单位】），支持**一键复制**，方便作业批改、教学备课与工程报告。
-- **有效数字可调**：支持保留 2位、3位、4位或 6位小数。
+### 3. Scientific Material Density Database (30+ Substances)
+- **Metals & Alloys**: Gold ($19.32\text{ g/cm}^3$), Platinum ($21.45$), Lead ($11.34$), Silver ($10.49$), Copper ($8.96$), Brass ($8.50$), Iron/Steel ($7.87$), Stainless Steel 304 ($7.93$), Cast Iron ($7.20$), Titanium ($4.51$), Aluminum ($2.70$), Magnesium ($1.74$).
+- **Non-metals & Daily Materials**: Diamond ($3.51$), Granite ($2.70$), Glass ($2.50$), Concrete ($2.40$), Ice ($0.917$ at 0°C), Paraffin ($0.90$), PE Plastic ($0.95$), PTFE ($2.20$), Oak Wood ($0.75$), Cork ($0.24$), Silica Aerogel ($0.003$).
+- **Liquids**: Mercury ($13.60$), Honey ($1.42$), Glycerin ($1.26$), Milk ($1.03$), Seawater ($1.025$), Pure Water ($1.000$ at 4°C), Vegetable Oil ($0.92$), Diesel ($0.83$), Alcohol/Ethanol ($0.789$), Gasoline ($0.74$).
+- **Gases (0°C, 101.3 kPa)**: $\text{CO}_2$ ($1.977\text{ kg/m}^3$), Oxygen ($1.429$), Nitrogen ($1.251$), Air ($1.293$), Methane ($0.717$), Helium ($0.179$), Hydrogen ($0.0899$).
+- **Search & Custom Data**: Bilingual search by chemical formula (Fe, Al, Au, H2O) or name. Custom materials persist safely in `localStorage`.
 
----
+### 4. Archimedes Buoyancy Simulation
+- **Forces**:
+  - Downward gravity $G = m g = \rho_{obj} V_{obj} g$
+  - Upward buoyancy $F_b = \rho_{fluid} g V_{disp}$
+- **Equilibrium States**:
+  - **Floating** ($\rho_{obj} < \rho_{fluid}$): $F_b = G$, submersion fraction $V_{disp}/V = \rho_{obj}/\rho_{fluid}$.
+  - **Suspended** ($\rho_{obj} = \rho_{fluid}$): Neutral buoyancy at any depth.
+  - **Sunk** ($\rho_{obj} > \rho_{fluid}$): Container bottom provides normal support force $F_n = G - F_b$.
+- **Interactive SVG Visualizer**: Real-time water displacement and force vector arrows.
 
-### 2. 多单位全自动国际单位 (SI) 换算
+### 5. Multi-Component Mixture & Alloy Calculator
+- Formula: $\rho_{mix} = \frac{m_1 + m_2 + \dots + m_n}{V_1 + V_2 + \dots + V_n}$.
+- Prevents the common student trap of taking the arithmetic average $(\rho_1 + \rho_2)/2$.
+- Pre-sets: 18K Gold Purity, Alcohol-Water solution, Saline seed selection.
 
-- **密度单位**：$\text{g/cm}^3$、$\text{kg/m}^3$ (SI)、$\text{g/mL}$、$\text{kg/L}$、$\text{lb/ft}^3$、$\text{lb/in}^3$
-  - 核心换算法则：$1\text{ g/cm}^3 = 1000\text{ kg/m}^3 = 1\text{ g/mL} = 1\text{ kg/L} \approx 62.428\text{ lb/ft}^3$
-- **质量单位**：$\text{g}$、$\text{kg}$ (SI)、$\text{mg}$、$\text{t}$、$\text{lb}$、$\text{oz}$
-- **体积单位**：$\text{cm}^3$、$\text{m}^3$ (SI)、$\text{dm}^3$、$\text{L}$、$\text{mL}$、$\text{mm}^3$、$\text{ft}^3$、$\text{in}^3$、$\text{gal}$
-- 输入任意单位，页面自动同步换算到对应的国际标准单位 (SI)。
+### 6. Classic Physics Problem Solvers
+- **Archimedes Crown**: Checks gold purity and calculates adulterated silver mass.
+- **Hollow vs Solid Casting**: Computes hollow cavity volume and water-filled weight.
+- **Displacement Method**: Graduated cylinder $\Delta V = V_2 - V_1$ density measurement.
+- **Ice Melting Water Level**: Rigorous mathematical proof for water and dense brine.
 
----
-
-### 3. 内置 30+ 常见科学物质密度数据库
-
-包含固态金属、非金属工程建材、日常液体与标准状态下气体的精密密度数据：
-- **固态金属**：黄金 ($19.32\text{ g/cm}^3$)、铂金 ($21.45$)、铅 ($11.34$)、银 ($10.49$)、纯铜 ($8.96$)、黄铜 ($8.50$)、铁/钢 ($7.87$)、不锈钢 ($7.93$)、铸铁 ($7.20$)、钛 ($4.51$)、铝 ($2.70$)、镁 ($1.74$) 等
-- **非金属与建筑日常**：钻石 ($3.51$)、花岗岩 ($2.70$)、玻璃 ($2.50$)、混凝土 ($2.40$)、冰 ($0.917$)、石蜡 ($0.90$)、PE塑料 ($0.95$)、PTFE特氟龙 ($2.20$)、橡木 ($0.75$)、松木 ($0.50$)、软木塞 ($0.24$)、气凝胶 ($0.003$) 等
-- **液体物质**：水银/汞 ($13.60$)、纯水 ($1.000$, 4℃)、海水 ($1.025$)、植物油 ($0.920$)、柴油 ($0.830$)、酒精 ($0.789$)、汽油 ($0.740$)、甘油 ($1.261$)、牛奶 ($1.030$) 等
-- **气体物质 (0℃, 101.3kPa)**：空气 ($1.293\text{ kg/m}^3$)、氧气 ($1.429\text{ kg/m}^3$)、氮气 ($1.251\text{ kg/m}^3$)、二氧化碳 ($1.977\text{ kg/m}^3$)、氦气 ($0.179\text{ kg/m}^3$)、氢气 ($0.0899\text{ kg/m}^3$) 等
-- **功能特性**：
-  - 支持中英文搜索、化学式搜索 (如 Fe, Al, H2O, Au)
-  - 一键代入计算器
-  - 沉水/浮水特性快速标注
-  - 支持**用户自定义添加新测量物质**，持久化保存在本地浏览器 LocalStorage。
-
----
-
-### 4. 阿基米德浮力与浮沉动态物理仿真
-
-- **力学平衡**：
-  - 重力 $G = mg = \rho_{物} V_{物} g$
-  - 浮力 $F_{浮} = \rho_{液} g V_{排}$
-- **浮沉条件判定**：
-  - $\rho_{物} < \rho_{液}$：**漂浮** ($F_{浮} = G$)，自动计算露出液面比例 $V_{露}/V = 1 - \rho_{物}/\rho_{液}$
-  - $\rho_{物} = \rho_{液}$：**悬浮** ($F_{浮} = G$)，浸没于液体中任意深度
-  - $\rho_{物} > \rho_{液}$：**沉底** ($F_{浮} < G$)，水槽底部提供支持力 $F_{支} = G - F_{浮}$
-- **可视化动态水槽**：根据比例实时渲染物体吃水深度、排开液面高度、重力向下向量 $\vec{G}$ 与浮力向上向量 $\vec{F}_{浮}$。
-
----
-
-### 5. 多组分合金与溶液混合密度计算
-
-- **基本原理**：$\rho_{混} = \frac{m_1 + m_2 + \dots + m_n}{V_1 + V_2 + \dots + V_n}$
-- **避免常见误区**：提示学生与工程师“混合密度绝非简单的算术平均值 $(\rho_1 + \rho_2)/2$”。
-- **内置典型预设**：
-  - 18K金合金纯度测算 (75%纯金 + 纯铜)
-  - 酒精与水配比溶液
-  - 选种用浓盐水配比
+### 7. Google SEO & Structured Data (Schema.org)
+- Integrated `WebApplication` and `FAQPage` JSON-LD schemas.
+- Rich search engine snippets for Google Search "People Also Ask" queries.
+- Clean semantic HTML structure.
 
 ---
 
-### 6. 四大物理经典必考题型速算与推导
-
-1. **阿基米德王冠测金**：输入质量与排开水体积，计算平均密度，精确推导掺入杂质白银的克数与纯金占比。
-2. **铸件/铁球空心与实心判定**：根据外表体积和材料密度，快速计算空心部分体积 $V_{空}$ 及注满水后的增重。
-3. **排水法量筒测密度**：由量筒前后液面差 $V_2 - V_1$ 与天平质量直接求解。
-4. **冰融化水面升降严谨证明**：
-   - 在纯水中漂浮的冰融化后：液面**保持不变** ($V_{排} = V_{化水}$)
-   - 在浓盐水中漂浮的冰融化后：液面**上升** ($V_{排} < V_{化水}$)
-
----
-
-## 🛠️ 技术栈
-
-- **框架**：React 19 + TypeScript
-- **构建工具**：Vite 8.3
-- **样式**：Tailwind CSS v4 + 响应式布局 + 现代科技感物理配色
-- **字体**：Plus Jakarta Sans (排版) + JetBrains Mono (科学数值与数据)
-- **动效与音效**：Canvas Confetti, CSS Transitions
-
----
-
-## 🚀 本地开发与启动
+## 🚀 Getting Started
 
 ```bash
-# 1. 安装依赖
+# 1. Install dependencies
 npm install
 
-# 2. 启动本地开发服务器
+# 2. Run local development server
 npm run dev
 
-# 3. 生产环境打包构建
+# 3. Production build
 npm run build
 ```
 
 ---
 
-## 📄 开源许可证
+## 📄 License
 
-本项目采用 [MIT License](LICENSE) 开源协议。
+This project is licensed under the [MIT License](LICENSE).

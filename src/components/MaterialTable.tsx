@@ -2,17 +2,21 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Substance, SubstanceState, SubstanceCategory } from '../types/density';
 import { DEFAULT_SUBSTANCES } from '../data/materials';
 import { formatNumber } from '../utils/units';
-import { Search, Plus, Trash2, ArrowUpRight, Check, Filter } from 'lucide-react';
+import { Language, TRANSLATIONS } from '../i18n/translations';
+import { Search, Plus, Trash2 } from 'lucide-react';
 
 interface MaterialTableProps {
+  lang: Language;
   onSelectMaterial: (sub: Substance) => void;
   onSimulateBuoyancy: (sub: Substance) => void;
 }
 
 export const MaterialTable: React.FC<MaterialTableProps> = ({
+  lang,
   onSelectMaterial,
   onSimulateBuoyancy,
 }) => {
+  const t = TRANSLATIONS[lang];
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -26,21 +30,28 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
   const [newState, setNewState] = useState<SubstanceState>('solid');
   const [newDesc, setNewDesc] = useState('');
 
-  // Load custom substances from localStorage
+  // Load custom substances from localStorage with disaster-recovery try/catch
   useEffect(() => {
     try {
       const saved = localStorage.getItem('density_custom_materials');
       if (saved) {
-        setCustomSubstances(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setCustomSubstances(parsed);
+        }
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn('Could not read custom materials from storage:', e);
     }
   }, []);
 
   const saveCustomSubstances = (items: Substance[]) => {
     setCustomSubstances(items);
-    localStorage.setItem('density_custom_materials', JSON.stringify(items));
+    try {
+      localStorage.setItem('density_custom_materials', JSON.stringify(items));
+    } catch (e) {
+      console.warn('Could not save to storage:', e);
+    }
   };
 
   const handleAddCustom = (e: React.FormEvent) => {
@@ -56,8 +67,8 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
       category: newCategory,
       density: dVal,
       densitySI: dVal * 1000,
-      condition: '自定义测试数据',
-      description: newDesc.trim() || '用户自定义测量物质',
+      condition: lang === 'en' ? 'Custom Measurement' : '自定义测试数据',
+      description: newDesc.trim() || (lang === 'en' ? 'User-defined material' : '用户自定义测量物质'),
       color: '#6366F1',
       isCustom: true,
     };
@@ -73,19 +84,18 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
     saveCustomSubstances(customSubstances.filter((s) => s.id !== id));
   };
 
-  // Combine default and custom
   const allSubstances = useMemo(() => {
     return [...customSubstances, ...DEFAULT_SUBSTANCES];
   }, [customSubstances]);
 
-  // Filtered and sorted
   const filteredList = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
     return allSubstances
       .filter((sub) => {
         const matchesSearch =
-          sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          sub.nameEn.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (sub.formula && sub.formula.toLowerCase().includes(searchTerm.toLowerCase()));
+          sub.name.toLowerCase().includes(q) ||
+          sub.nameEn.toLowerCase().includes(q) ||
+          (sub.formula && sub.formula.toLowerCase().includes(q));
 
         if (!matchesSearch) return false;
 
@@ -106,45 +116,41 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Header & Search Bar */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">常用物质密度数据库</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              内置科学标准固体、液体、气体密度常数表（含常温20℃、标准状况0℃标定）。支持一键填入计算器与浮沉对比。
-            </p>
+            <h2 className="text-base font-bold text-slate-900">{t.matDbTitle}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{t.matDbDesc}</p>
           </div>
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors shrink-0"
           >
-            <Plus className="w-4 h-4" />
-            <span>添加自定义物质</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>{t.addCustomBtn}</span>
           </button>
         </div>
 
-        {/* Search & Category Filter Controls */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 pt-2">
-          {/* Search box */}
+        {/* Search & Sort */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 pt-1">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="搜索物质名称 / 英文名 / 化学式 (如: 铁, Fe, 水, Al, 酒精...)"
-              className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+              placeholder={t.searchPlaceholder}
+              className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
             />
           </div>
 
-          {/* Sort order toggle */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-              className="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center gap-1 shrink-0"
+              className="px-3 py-2 text-xs font-medium rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 shrink-0"
             >
-              <span>密度排序: {sortOrder === 'desc' ? '由大到小 ↓' : '由小到大 ↑'}</span>
+              <span>{t.sortByDensity}: {sortOrder === 'desc' ? t.sortDesc : t.sortAsc}</span>
             </button>
           </div>
         </div>
@@ -152,18 +158,18 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
         {/* Filter Tabs */}
         <div className="flex flex-wrap gap-1.5 pt-1">
           {[
-            { id: 'all', label: '全部物质' },
-            { id: 'solid', label: '固态 (含金属/非金属)' },
-            { id: 'liquid', label: '液态 (水/油/水银/酒精)' },
-            { id: 'gas', label: '气态 (空气/氧气/氢气)' },
-            { id: 'float', label: '能浮在水面 (ρ < 1.0)' },
-            { id: 'sink', label: '在水中下沉 (ρ > 1.0)' },
-            { id: 'custom', label: `自定义 (${customSubstances.length})` },
+            { id: 'all', label: t.filterAll },
+            { id: 'solid', label: t.filterSolid },
+            { id: 'liquid', label: t.filterLiquid },
+            { id: 'gas', label: t.filterGas },
+            { id: 'float', label: t.filterFloat },
+            { id: 'sink', label: t.filterSink },
+            { id: 'custom', label: `${t.filterCustom} (${customSubstances.length})` },
           ].map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                 selectedCategory === cat.id
                   ? 'bg-slate-900 text-white font-semibold'
                   : 'bg-slate-100 text-slate-600 hover:text-slate-900'
@@ -176,43 +182,58 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
       </div>
 
       {/* Material Table Grid */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-mono text-xs uppercase tracking-wider">
-                <th className="py-3 px-4 font-semibold">物质名称 / 标识</th>
-                <th className="py-3 px-4 font-semibold">物态</th>
-                <th className="py-3 px-4 font-semibold">密度 (g/cm³)</th>
-                <th className="py-3 px-4 font-semibold">国际单位 (kg/m³)</th>
-                <th className="py-3 px-4 font-semibold">水沉浮特性</th>
-                <th className="py-3 px-4 font-semibold">测量条件与描述</th>
-                <th className="py-3 px-4 font-semibold text-right">操作</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-mono text-2xs uppercase tracking-wider">
+                <th className="py-2.5 px-4 font-semibold">{t.colName}</th>
+                <th className="py-2.5 px-4 font-semibold">{t.colState}</th>
+                <th className="py-2.5 px-4 font-semibold">{t.colDensityGcm3}</th>
+                <th className="py-2.5 px-4 font-semibold">{t.colDensitySI}</th>
+                <th className="py-2.5 px-4 font-semibold">{t.colWaterFloat}</th>
+                <th className="py-2.5 px-4 font-semibold">{t.colCondition}</th>
+                <th className="py-2.5 px-4 font-semibold text-right">{t.colAction}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {filteredList.map((sub) => {
+                const displayName = lang === 'en' ? sub.nameEn : sub.name;
                 const isWaterFloat = sub.density < 1.0;
                 const isWaterEqual = sub.density === 1.0;
+
+                const stateText =
+                  sub.state === 'solid'
+                    ? lang === 'en'
+                      ? 'Solid'
+                      : '固态'
+                    : sub.state === 'liquid'
+                    ? lang === 'en'
+                      ? 'Liquid'
+                      : '液态'
+                    : lang === 'en'
+                    ? 'Gas'
+                    : '气态';
+
                 return (
                   <tr key={sub.id} className="hover:bg-slate-50/70 transition-colors">
-                    {/* Name & Formula */}
-                    <td className="py-3 px-4">
+                    {/* Name */}
+                    <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className="w-3 h-3 rounded-full shrink-0 border border-slate-300"
+                          className="w-2.5 h-2.5 rounded-full shrink-0 border border-slate-300"
                           style={{ backgroundColor: sub.color }}
                         />
                         <div>
-                          <span className="font-bold text-slate-900">{sub.name}</span>
+                          <span className="font-bold text-slate-900">{displayName}</span>
                           {sub.formula && (
-                            <span className="ml-1.5 text-xs font-mono text-slate-500">
+                            <span className="ml-1.5 text-2xs font-mono text-slate-400">
                               [{sub.formula}]
                             </span>
                           )}
                           {sub.isCustom && (
-                            <span className="ml-1.5 text-xs font-mono text-indigo-600 font-bold">
-                              · 自定义
+                            <span className="ml-1.5 text-2xs font-mono text-indigo-600 font-bold">
+                              · {lang === 'en' ? 'Custom' : '自定义'}
                             </span>
                           )}
                         </div>
@@ -220,65 +241,62 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
                     </td>
 
                     {/* State */}
-                    <td className="py-3 px-4 text-xs font-medium text-slate-600">
-                      {sub.state === 'solid'
-                        ? '固态'
-                        : sub.state === 'liquid'
-                        ? '液态'
-                        : '气态'}
+                    <td className="py-2.5 px-4 text-slate-600 font-medium">
+                      {stateText}
                     </td>
 
                     {/* Density in g/cm3 */}
-                    <td className="py-3 px-4 font-mono font-bold text-blue-700 tabular-nums">
+                    <td className="py-2.5 px-4 font-mono font-bold text-blue-700 tabular-nums">
                       {formatNumber(sub.density, 4)}
                     </td>
 
-                    {/* Density in kg/m3 (SI) */}
-                    <td className="py-3 px-4 font-mono font-semibold text-slate-700 tabular-nums">
+                    {/* Density in kg/m3 */}
+                    <td className="py-2.5 px-4 font-mono font-semibold text-slate-700 tabular-nums">
                       {formatNumber(sub.densitySI, 2)}
                     </td>
 
                     {/* Float in water */}
-                    <td className="py-3 px-4">
+                    <td className="py-2.5 px-4">
                       {isWaterEqual ? (
-                        <span className="text-xs font-semibold text-teal-700">悬浮</span>
+                        <span className="text-2xs font-semibold text-teal-700">
+                          {lang === 'en' ? 'Suspended' : '悬浮'}
+                        </span>
                       ) : isWaterFloat ? (
-                        <span className="text-xs font-semibold text-sky-700">漂浮 (浮水)</span>
+                        <span className="text-2xs font-semibold text-sky-700">
+                          {lang === 'en' ? 'Floats' : '漂浮'}
+                        </span>
                       ) : (
-                        <span className="text-xs font-medium text-slate-500">沉底</span>
+                        <span className="text-2xs font-medium text-slate-500">
+                          {lang === 'en' ? 'Sinks' : '沉底'}
+                        </span>
                       )}
                     </td>
 
-                    {/* Conditions and Desc */}
-                    <td className="py-3 px-4 max-w-xs text-xs text-slate-500">
-                      <div className="truncate font-sans" title={sub.description}>
-                        {sub.description}
-                      </div>
-                      <div className="text-slate-400 font-mono text-2xs">{sub.condition}</div>
+                    {/* Description */}
+                    <td className="py-2.5 px-4 max-w-xs text-slate-500 truncate" title={sub.description}>
+                      <span>{sub.description}</span>
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-2.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => onSelectMaterial(sub)}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-                          title="将此物质密度代入计算器"
+                          className="px-2 py-1 text-2xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                         >
-                          填入计算器
+                          {t.useInCalc}
                         </button>
                         <button
                           onClick={() => onSimulateBuoyancy(sub)}
-                          className="px-2 py-1 text-xs font-medium rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-                          title="在浮力水槽中进行浮沉实验"
+                          className="px-2 py-1 text-2xs font-medium rounded bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
                         >
-                          浮沉实验
+                          {t.buoyancyTest}
                         </button>
                         {sub.isCustom && (
                           <button
                             onClick={() => handleDeleteCustom(sub.id)}
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
-                            title="删除自定义数据"
+                            className="p-1 text-red-500 hover:text-red-700 rounded"
+                            title={t.deleteCustom}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -293,34 +311,34 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
         </div>
 
         {filteredList.length === 0 && (
-          <div className="text-center py-12 text-slate-400 text-sm">
-            没有找到与 “{searchTerm}” 相关的物质
+          <div className="text-center py-10 text-slate-400 text-xs">
+            {t.noMatFound}
           </div>
         )}
       </div>
 
       {/* Add Custom Substance Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-2xs p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 mb-4">添加自定义测量物质</h3>
+            <h3 className="text-sm font-bold text-slate-900 mb-4">{t.addModalTitle}</h3>
             <form onSubmit={handleAddCustom} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">物质名称</label>
+                <label className="block text-2xs font-semibold text-slate-700 mb-1">{t.modalMatName}</label>
                 <input
                   type="text"
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="例如: 某新型树脂 / 自制合金"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 outline-none focus:border-blue-500"
+                  placeholder={lang === 'en' ? 'e.g. Carbon Fiber Composite' : '例如: 某新型碳纤维复合材料'}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 outline-none focus:border-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    密度 (g/cm³)
+                  <label className="block text-2xs font-semibold text-slate-700 mb-1">
+                    {t.modalDensity}
                   </label>
                   <input
                     type="number"
@@ -328,32 +346,32 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
                     required
                     value={newDensity}
                     onChange={(e) => setNewDensity(e.target.value)}
-                    placeholder="如: 1.25"
-                    className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-slate-300 outline-none focus:border-blue-500"
+                    placeholder="e.g. 1.45"
+                    className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-300 outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">物理状态</label>
+                  <label className="block text-2xs font-semibold text-slate-700 mb-1">{t.modalState}</label>
                   <select
                     value={newState}
                     onChange={(e) => setNewState(e.target.value as SubstanceState)}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 outline-none"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 outline-none"
                   >
-                    <option value="solid">固态</option>
-                    <option value="liquid">液态</option>
-                    <option value="gas">气态</option>
+                    <option value="solid">{lang === 'en' ? 'Solid' : '固态'}</option>
+                    <option value="liquid">{lang === 'en' ? 'Liquid' : '液态'}</option>
+                    <option value="gas">{lang === 'en' ? 'Gas' : '气态'}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">备注说明</label>
+                <label className="block text-2xs font-semibold text-slate-700 mb-1">{t.modalNote}</label>
                 <input
                   type="text"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="如: 实验室电子秤与量筒测得"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 outline-none"
+                  placeholder={lang === 'en' ? 'Lab measurement note' : '实验室测量备注'}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 outline-none"
                 />
               </div>
 
@@ -361,15 +379,15 @@ export const MaterialTable: React.FC<MaterialTableProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-800"
                 >
-                  取消
+                  {t.modalCancel}
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs"
+                  className="px-4 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs"
                 >
-                  保存物质
+                  {t.modalSave}
                 </button>
               </div>
             </form>

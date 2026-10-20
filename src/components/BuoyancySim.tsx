@@ -1,82 +1,96 @@
 import React, { useState, useMemo } from 'react';
 import { Substance } from '../types/density';
 import { formatNumber } from '../utils/units';
-import { DEFAULT_SUBSTANCES } from '../data/materials';
-import { Waves, ArrowDown, ArrowUp, RefreshCw, Info } from 'lucide-react';
+import { Language, TRANSLATIONS } from '../i18n/translations';
+import { Waves, Info } from 'lucide-react';
 
 interface BuoyancySimProps {
+  lang: Language;
   initialObject?: Substance | null;
 }
 
-export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
+export const BuoyancySim: React.FC<BuoyancySimProps> = ({ lang, initialObject }) => {
+  const t = TRANSLATIONS[lang];
+
   // Object settings
-  const [objectDensity, setObjectDensity] = useState<number>(initialObject ? initialObject.density : 0.917); // default Ice
-  const [objectVolume, setObjectVolume] = useState<number>(100); // cm³
-  const [objectName, setObjectName] = useState<string>(initialObject ? initialObject.name : '冰块 (Ice)');
+  const [objectDensity, setObjectDensity] = useState<number>(
+    initialObject ? initialObject.density : 0.917
+  );
+  const [objectVolume, setObjectVolume] = useState<number>(100);
+  const [objectName, setObjectName] = useState<string>(
+    initialObject
+      ? lang === 'en'
+        ? initialObject.nameEn
+        : initialObject.name
+      : lang === 'en'
+      ? 'Ice Block'
+      : '冰块 (Ice)'
+  );
 
   // Liquid settings
-  const [liquidDensity, setLiquidDensity] = useState<number>(1.0); // g/cm³ default Pure Water
-  const [liquidName, setLiquidName] = useState<string>('纯水 (Pure Water)');
-  const [gravityG, setGravityG] = useState<number>(9.8); // N/kg
+  const [liquidDensity, setLiquidDensity] = useState<number>(1.0);
+  const [liquidName, setLiquidName] = useState<string>(
+    lang === 'en' ? 'Pure Water (4°C)' : '纯水 (4℃)'
+  );
+  const [gravityG, setGravityG] = useState<number>(9.8);
 
-  // Liquid Presets
-  const liquidPresets = [
-    { name: '纯水 (4℃)', density: 1.0, color: '#38bdf8' },
-    { name: '标准海水', density: 1.025, color: '#0284c7' },
-    { name: '医用酒精', density: 0.789, color: '#a5b4fc' },
-    { name: '植物油', density: 0.92, color: '#facc15' },
-    { name: '水银 / 汞', density: 13.6, color: '#94a3b8' },
-    { name: '浓盐水 (选种)', density: 1.15, color: '#67e8f9' },
-  ];
+  // Presets
+  const liquidPresets = useMemo(() => [
+    { nameEn: 'Pure Water', nameZh: '纯水 (4℃)', density: 1.0 },
+    { nameEn: 'Seawater', nameZh: '标准海水', density: 1.025 },
+    { nameEn: 'Alcohol', nameZh: '医用酒精', density: 0.789 },
+    { nameEn: 'Vegetable Oil', nameZh: '植物油', density: 0.92 },
+    { nameEn: 'Mercury', nameZh: '水银 / 汞', density: 13.6 },
+    { nameEn: 'Dense Saline', nameZh: '浓盐水 (选种)', density: 1.15 },
+  ], []);
 
-  // Common object presets
-  const objectPresets = [
-    { name: '冰块', density: 0.917 },
-    { name: '橡木块', density: 0.75 },
-    { name: '铝块', density: 2.7 },
-    { name: '纯铁块', density: 7.87 },
-    { name: '纯金块', density: 19.32 },
-    { name: '软木塞', density: 0.24 },
-    { name: 'PE塑料', density: 0.95 },
-  ];
+  const objectPresets = useMemo(() => [
+    { nameEn: 'Ice', nameZh: '冰块', density: 0.917 },
+    { nameEn: 'Oak Wood', nameZh: '橡木块', density: 0.75 },
+    { nameEn: 'Aluminum', nameZh: '铝块', density: 2.7 },
+    { nameEn: 'Iron / Steel', nameZh: '纯铁块', density: 7.87 },
+    { nameEn: 'Gold', nameZh: '纯金块', density: 19.32 },
+    { nameEn: 'Cork', nameZh: '软木塞', density: 0.24 },
+    { nameEn: 'PE Plastic', nameZh: 'PE塑料', density: 0.95 },
+  ], []);
 
-  // Physics calculation
+  // Safe Physics calculation with zero protection
   const physics = useMemo(() => {
-    // Mass in grams: m = rho * V
-    const massG = objectDensity * objectVolume;
+    const safeObjDensity = Math.max(0.0001, objectDensity || 0.0001);
+    const safeObjVolume = Math.max(0.0001, objectVolume || 0.0001);
+    const safeLiqDensity = Math.max(0.0001, liquidDensity || 0.0001);
+
+    const massG = safeObjDensity * safeObjVolume;
     const massKg = massG / 1000;
-    // Gravity Force G = m * g (Newtons)
     const forceG = massKg * gravityG;
 
-    // Submersion ratio: rho_obj / rho_liq
-    const densityRatio = objectDensity / liquidDensity;
+    const densityRatio = safeObjDensity / safeLiqDensity;
 
     let state: 'floating' | 'suspended' | 'sunk';
     let submergedRatio = 0;
     let vDisplacedCm3 = 0;
     let buoyancyForceN = 0;
-    let normalForceN = 0; // support from bottom
+    let normalForceN = 0;
 
     if (Math.abs(densityRatio - 1.0) < 0.001) {
       state = 'suspended';
       submergedRatio = 1.0;
-      vDisplacedCm3 = objectVolume;
+      vDisplacedCm3 = safeObjVolume;
       buoyancyForceN = forceG;
       normalForceN = 0;
     } else if (densityRatio < 1.0) {
       state = 'floating';
       submergedRatio = densityRatio;
-      vDisplacedCm3 = objectVolume * submergedRatio;
-      buoyancyForceN = forceG; // Floating in equilibrium: F_buoyant = G
+      vDisplacedCm3 = safeObjVolume * submergedRatio;
+      buoyancyForceN = forceG;
       normalForceN = 0;
     } else {
       state = 'sunk';
       submergedRatio = 1.0;
-      vDisplacedCm3 = objectVolume;
-      // F_buoyant = rho_liq * V_displaced * g
-      const displacedMassKg = (liquidDensity * vDisplacedCm3) / 1000;
+      vDisplacedCm3 = safeObjVolume;
+      const displacedMassKg = (safeLiqDensity * vDisplacedCm3) / 1000;
       buoyancyForceN = displacedMassKg * gravityG;
-      normalForceN = forceG - buoyancyForceN;
+      normalForceN = Math.max(0, forceG - buoyancyForceN);
     }
 
     const exposedRatio = 1 - submergedRatio;
@@ -94,22 +108,15 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
     };
   }, [objectDensity, objectVolume, liquidDensity, gravityG]);
 
-  // SVG representation dimensions
-  // Container height: 320px
-  // Liquid level height: 200px from bottom (top at y = 120)
-  // Tank bottom at y = 300
+  // SVG representation geometry
   const tankWidth = 360;
   const tankHeight = 300;
   const liquidLevelY = 130;
   const tankBottomY = 280;
 
-  // Object box size
-  const blockSize = Math.min(Math.max(Math.cbrt(objectVolume) * 16, 50), 110);
+  const blockSize = Math.min(Math.max(Math.cbrt(objectVolume || 1) * 16, 45), 100);
   const blockX = (tankWidth - blockSize) / 2;
 
-  // Calculate object Y position in tank:
-  // If floating: submerged height = blockSize * submergedRatio
-  // water line at liquidLevelY, so objectTop = liquidLevelY - (blockSize * exposedRatio)
   let blockY = liquidLevelY - blockSize * physics.exposedRatio;
   if (physics.state === 'suspended') {
     blockY = liquidLevelY + (tankBottomY - liquidLevelY - blockSize) / 2;
@@ -120,27 +127,25 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
   return (
     <div className="space-y-6">
       {/* Introduction Card */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Waves className="w-5 h-5 text-blue-600" />
-              阿基米德浮力与浮沉动态仿真水槽
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Waves className="w-4 h-4 text-blue-600" />
+              <span>{t.buoyancyTitle}</span>
             </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              基于物理定律：当物态密度 ρ物 &lt; ρ液 时物体漂浮；ρ物 = ρ液 时悬浮；ρ物 &gt; ρ液 时沉底。实时计算排水体积 V排 与受力平衡。
-            </p>
+            <p className="text-xs text-slate-500 mt-1">{t.buoyancyDesc}</p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs font-mono text-slate-500">重力常数 g:</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-2xs font-mono text-slate-500">{t.gravityConst}:</span>
             <button
               onClick={() => setGravityG(9.8)}
               className={`px-2.5 py-1 text-xs font-mono rounded ${
                 gravityG === 9.8 ? 'bg-blue-600 text-white font-bold' : 'bg-slate-100 text-slate-700'
               }`}
             >
-              9.8 N/kg (精细)
+              9.8 N/kg
             </button>
             <button
               onClick={() => setGravityG(10)}
@@ -148,7 +153,7 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
                 gravityG === 10 ? 'bg-blue-600 text-white font-bold' : 'bg-slate-100 text-slate-700'
               }`}
             >
-              10 N/kg (教学)
+              10 N/kg
             </button>
           </div>
         </div>
@@ -158,150 +163,154 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
         {/* Left Column: Parameter Setup (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Object Setup Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center justify-between">
-              <span>1. 待测试物体参数</span>
-              <span className="text-xs text-blue-600 font-mono">{objectName}</span>
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono flex items-center justify-between">
+              <span>{t.testObjTitle}</span>
+              <span className="text-blue-600 normal-case">{objectName}</span>
             </h3>
 
-            {/* Object presets */}
             <div>
-              <span className="text-xs text-slate-500 block mb-1.5">快速选择物体:</span>
+              <span className="text-2xs text-slate-500 block mb-1.5">{t.quickSelectObj}</span>
               <div className="flex flex-wrap gap-1.5">
-                {objectPresets.map((p) => (
-                  <button
-                    key={p.name}
-                    onClick={() => {
-                      setObjectDensity(p.density);
-                      setObjectName(p.name);
-                    }}
-                    className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-                      objectDensity === p.density
-                        ? 'bg-blue-600 text-white font-semibold'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {p.name} ({p.density})
-                  </button>
-                ))}
+                {objectPresets.map((p) => {
+                  const label = lang === 'en' ? p.nameEn : p.nameZh;
+                  return (
+                    <button
+                      key={p.nameEn}
+                      onClick={() => {
+                        setObjectDensity(p.density);
+                        setObjectName(label);
+                      }}
+                      className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                        objectDensity === p.density
+                          ? 'bg-blue-600 text-white font-semibold'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {label} ({p.density})
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  物体密度 (g/cm³)
+                <label className="block text-2xs font-semibold text-slate-600 mb-1">
+                  {t.objDensity}
                 </label>
                 <input
                   type="number"
                   step="any"
                   value={objectDensity}
                   onChange={(e) => {
-                    setObjectDensity(parseFloat(e.target.value) || 0);
-                    setObjectName('自定义物体');
+                    setObjectDensity(parseFloat(e.target.value) || 0.0001);
+                    setObjectName(t.customMaterial);
                   }}
-                  className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-slate-300 outline-none focus:border-blue-500"
+                  className="w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-slate-300 outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  物体体积 (cm³)
+                <label className="block text-2xs font-semibold text-slate-600 mb-1">
+                  {t.objVolume}
                 </label>
                 <input
                   type="number"
                   step="any"
                   value={objectVolume}
                   onChange={(e) => setObjectVolume(parseFloat(e.target.value) || 1)}
-                  className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-slate-300 outline-none focus:border-blue-500"
+                  className="w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-slate-300 outline-none focus:border-blue-500"
                 />
               </div>
             </div>
           </div>
 
           {/* Liquid Setup Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center justify-between">
-              <span>2. 浸入液体介质</span>
-              <span className="text-xs text-blue-600 font-mono">{liquidName}</span>
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono flex items-center justify-between">
+              <span>{t.liquidMediumTitle}</span>
+              <span className="text-blue-600 normal-case">{liquidName}</span>
             </h3>
 
-            {/* Liquid presets */}
             <div>
-              <span className="text-xs text-slate-500 block mb-1.5">常用液体介质:</span>
+              <span className="text-2xs text-slate-500 block mb-1.5">{t.quickSelectLiq}</span>
               <div className="flex flex-wrap gap-1.5">
-                {liquidPresets.map((l) => (
-                  <button
-                    key={l.name}
-                    onClick={() => {
-                      setLiquidDensity(l.density);
-                      setLiquidName(l.name);
-                    }}
-                    className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-                      liquidDensity === l.density
-                        ? 'bg-blue-600 text-white font-semibold'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {l.name} ({l.density} g/cm³)
-                  </button>
-                ))}
+                {liquidPresets.map((l) => {
+                  const label = lang === 'en' ? l.nameEn : l.nameZh;
+                  return (
+                    <button
+                      key={l.nameEn}
+                      onClick={() => {
+                        setLiquidDensity(l.density);
+                        setLiquidName(label);
+                      }}
+                      className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                        liquidDensity === l.density
+                          ? 'bg-blue-600 text-white font-semibold'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {label} ({l.density})
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <div className="pt-1">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                液体密度 ρ液 (g/cm³)
+              <label className="block text-2xs font-semibold text-slate-600 mb-1">
+                {t.liqDensity}
               </label>
               <input
                 type="number"
                 step="any"
                 value={liquidDensity}
                 onChange={(e) => {
-                  setLiquidDensity(parseFloat(e.target.value) || 0);
-                  setLiquidName('自定义液体');
+                  setLiquidDensity(parseFloat(e.target.value) || 0.0001);
+                  setLiquidName(lang === 'en' ? 'Custom Liquid' : '自定义液体');
                 }}
-                className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-slate-300 outline-none focus:border-blue-500"
+                className="w-full px-3 py-1.5 text-xs font-mono rounded-lg border border-slate-300 outline-none focus:border-blue-500"
               />
             </div>
           </div>
 
           {/* Physics Analysis Summary */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 font-mono text-xs">
-            <h4 className="font-bold text-slate-900 font-sans text-sm flex items-center gap-1.5">
-              <Info className="w-4 h-4 text-blue-600" />
-              物理受力平衡方程
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-2 font-mono text-xs">
+            <h4 className="font-bold text-slate-900 font-sans text-xs flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-blue-600" />
+              <span>{t.forceBalanceTitle}</span>
             </h4>
             <div className="space-y-1.5 divide-y divide-slate-100 text-slate-600">
               <div className="flex justify-between pt-1">
-                <span>物体总质量 m物:</span>
+                <span>{t.objMass}</span>
                 <span className="font-bold text-slate-900">
-                  {formatNumber(physics.massG)} g ({formatNumber(physics.massG / 1000, 4)} kg)
+                  {formatNumber(physics.massG)} g
                 </span>
               </div>
               <div className="flex justify-between pt-1">
-                <span>物体自身重力 G = m·g:</span>
+                <span>{t.gravityForce}</span>
                 <span className="font-bold text-slate-900">
                   {formatNumber(physics.forceG, 3)} N
                 </span>
               </div>
               <div className="flex justify-between pt-1">
-                <span>排开液体体积 V排:</span>
+                <span>{t.displacedVol}</span>
                 <span className="font-bold text-blue-600">
-                  {formatNumber(physics.vDisplacedCm3, 2)} cm³ ({formatNumber((physics.submergedRatio) * 100, 1)}%)
+                  {formatNumber(physics.vDisplacedCm3, 2)} cm³ ({(physics.submergedRatio * 100).toFixed(1)}%)
                 </span>
               </div>
               <div className="flex justify-between pt-1">
-                <span>受到液体浮力 F浮:</span>
+                <span>{t.buoyancyForce}</span>
                 <span className="font-bold text-emerald-600">
                   {formatNumber(physics.buoyancyForceN, 3)} N
                 </span>
               </div>
               {physics.state === 'sunk' && (
                 <div className="flex justify-between pt-1 text-amber-700">
-                  <span>水槽底部支持力 F支:</span>
+                  <span>{t.normalForce}</span>
                   <span className="font-bold">
-                    {formatNumber(physics.normalForceN, 3)} N (G - F浮)
+                    {formatNumber(physics.normalForceN, 3)} N
                   </span>
                 </div>
               )}
@@ -309,15 +318,12 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
           </div>
         </div>
 
-        {/* Right Column: Visual Simulation Stage (7 cols) */}
+        {/* Right Column: Visual Stage (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col items-center">
             {/* Status Header Badge */}
-            <div className="w-full flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+            <div className="w-full flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs uppercase font-mono tracking-wider text-slate-400">
-                  浮沉状态判别
-                </span>
                 <span
                   className={`text-xs px-2.5 py-1 rounded-md font-bold font-mono ${
                     physics.state === 'floating'
@@ -328,52 +334,43 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
                   }`}
                 >
                   {physics.state === 'floating'
-                    ? '漂浮状态 (ρ物 < ρ液)'
+                    ? t.stateFloating
                     : physics.state === 'suspended'
-                    ? '悬浮状态 (ρ物 = ρ液)'
-                    : '沉底状态 (ρ物 > ρ液)'}
+                    ? t.stateSuspended
+                    : t.stateSunk}
                 </span>
               </div>
 
               {physics.state === 'floating' && (
-                <span className="text-xs text-slate-500 font-mono">
-                  露出液面: {(physics.exposedRatio * 100).toFixed(1)}% · 浸入: {(physics.submergedRatio * 100).toFixed(1)}%
+                <span className="text-2xs text-slate-500 font-mono">
+                  {(physics.exposedRatio * 100).toFixed(1)}% exposed · {(physics.submergedRatio * 100).toFixed(1)}% submerged
                 </span>
               )}
             </div>
 
-            {/* SVG Interactive Physics Tank */}
-            <div className="relative w-full max-w-md bg-slate-900/5 rounded-xl p-4 flex justify-center overflow-hidden border border-slate-200">
+            {/* SVG Simulation Tank */}
+            <div className="relative w-full max-w-md bg-slate-50 rounded-xl p-4 flex justify-center overflow-hidden border border-slate-200">
               <svg width={tankWidth} height={tankHeight} viewBox={`0 0 ${tankWidth} ${tankHeight}`}>
                 <defs>
-                  {/* Glass reflections */}
-                  <linearGradient id="glassReflect" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
-                    <stop offset="15%" stopColor="#ffffff" stopOpacity="0.05" />
-                    <stop offset="85%" stopColor="#ffffff" stopOpacity="0.05" />
-                    <stop offset="100%" stopColor="#ffffff" stopOpacity="0.3" />
-                  </linearGradient>
-
-                  {/* Water liquid gradient */}
-                  <linearGradient id="liquidGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.65" />
-                    <stop offset="100%" stopColor="#0284c7" stopOpacity="0.85" />
+                  <linearGradient id="liquidGradSim" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.5" />
+                    <stop offset="100%" stopColor="#0284c7" stopOpacity="0.8" />
                   </linearGradient>
                 </defs>
 
-                {/* Tank Back Wall */}
+                {/* Back Wall */}
                 <rect
                   x="20"
                   y="40"
                   width={tankWidth - 40}
                   height={tankBottomY - 40}
                   rx="6"
-                  fill="#f8fafc"
+                  fill="#ffffff"
                   stroke="#cbd5e1"
                   strokeWidth="2"
                 />
 
-                {/* Scale Ticks on Tank left */}
+                {/* Scale Ticks */}
                 {[...Array(6)].map((_, i) => {
                   const tickY = liquidLevelY + i * 25;
                   return (
@@ -392,8 +389,7 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
                   y={liquidLevelY}
                   width={tankWidth - 44}
                   height={tankBottomY - liquidLevelY}
-                  fill="url(#liquidGrad)"
-                  opacity="0.8"
+                  fill="url(#liquidGradSim)"
                 />
 
                 {/* Liquid Surface Line */}
@@ -403,7 +399,7 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
                   x2={tankWidth - 22}
                   y2={liquidLevelY}
                   stroke="#0284c7"
-                  strokeWidth="2.5"
+                  strokeWidth="2"
                   strokeDasharray="4 2"
                 />
 
@@ -415,83 +411,50 @@ export const BuoyancySim: React.FC<BuoyancySimProps> = ({ initialObject }) => {
                     width={blockSize}
                     height={blockSize}
                     rx="4"
-                    fill="#e2e8f0"
-                    stroke="#475569"
+                    fill="#f1f5f9"
+                    stroke="#334155"
                     strokeWidth="2"
-                    className="transition-all duration-500 ease-out"
+                    className="transition-all duration-300 ease-out"
                   />
                   <text
                     x={blockX + blockSize / 2}
                     y={blockY + blockSize / 2 + 4}
                     textAnchor="middle"
-                    fontSize="11"
+                    fontSize="10"
                     fontWeight="bold"
                     fontFamily="monospace"
-                    fill="#1e293b"
+                    fill="#0f172a"
                   >
-                    {objectName.slice(0, 4)}
+                    {objectName.slice(0, 8)}
                   </text>
                 </g>
 
                 {/* Force Vector Arrows */}
-                {/* Gravity Arrow G (pointing down from center) */}
                 <g transform={`translate(${blockX + blockSize / 2}, ${blockY + blockSize / 2})`}>
-                  {/* Arrow G */}
-                  <line
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="38"
-                    stroke="#dc2626"
-                    strokeWidth="2.5"
-                    markerEnd="url(#arrowRed)"
-                  />
+                  {/* Gravity G */}
+                  <line x1="0" y1="0" x2="0" y2="35" stroke="#dc2626" strokeWidth="2" />
                   <circle cx="0" cy="0" r="3" fill="#dc2626" />
-                  <text x="8" y="32" fontSize="11" fontWeight="bold" fontFamily="monospace" fill="#dc2626">
+                  <text x="6" y="30" fontSize="10" fontWeight="bold" fontFamily="monospace" fill="#dc2626">
                     G = {formatNumber(physics.forceG, 2)}N
                   </text>
 
-                  {/* Buoyancy Arrow F_buoyant (pointing up from center) */}
-                  <line
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="-38"
-                    stroke="#16a34a"
-                    strokeWidth="2.5"
-                  />
-                  <text x="8" y="-24" fontSize="11" fontWeight="bold" fontFamily="monospace" fill="#16a34a">
-                    F浮 = {formatNumber(physics.buoyancyForceN, 2)}N
+                  {/* Buoyancy F_b */}
+                  <line x1="0" y1="0" x2="0" y2="-35" stroke="#16a34a" strokeWidth="2" />
+                  <text x="6" y="-22" fontSize="10" fontWeight="bold" fontFamily="monospace" fill="#16a34a">
+                    F_b = {formatNumber(physics.buoyancyForceN, 2)}N
                   </text>
                 </g>
-
-                {/* Tank Glass Reflection */}
-                <rect
-                  x="20"
-                  y="40"
-                  width={tankWidth - 40}
-                  height={tankBottomY - 40}
-                  rx="6"
-                  fill="url(#glassReflect)"
-                  pointerEvents="none"
-                />
               </svg>
             </div>
 
-            {/* Explanation Note */}
-            <div className="w-full mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200/80 text-xs text-slate-600 space-y-1.5">
-              <div className="font-semibold text-slate-800">
-                物理浮沉原理解析:
+            {/* Principles summary */}
+            <div className="w-full mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200/80 text-2xs text-slate-600 space-y-1">
+              <div className="font-semibold text-slate-800 text-xs">
+                {t.physicsExplainTitle}
               </div>
-              <div>
-                • <strong>漂浮条件 (ρ物 &lt; ρ液)</strong>: 物体受平衡力作用，浮力与重力相等 (F浮 = G)。物体露出液面，浸入比例 V排 / V = ρ物 / ρ液。
-              </div>
-              <div>
-                • <strong>悬浮条件 (ρ物 = ρ液)</strong>: 物体完全浸没且可以静止在液体中任意深度，F浮 = G。
-              </div>
-              <div>
-                • <strong>沉底条件 (ρ物 &gt; ρ液)</strong>: 浮力小于重力 (F浮 &lt; G)，物体下沉至容器底部，容器底部对物体施加支持力 F支 = G - F浮。
-              </div>
+              <div>• {t.floatingLaw}</div>
+              <div>• {t.suspendedLaw}</div>
+              <div>• {t.sunkLaw}</div>
             </div>
           </div>
         </div>
