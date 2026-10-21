@@ -1,4 +1,4 @@
-export type Language = 'en' | 'zh';
+export type Language = 'en' | 'es' | 'fr' | 'pt' | 'zh';
 
 export interface Translations {
   // Navigation & Branding
@@ -157,8 +157,7 @@ export interface Translations {
   seoGuideBtn: string;
 }
 
-export const TRANSLATIONS: Record<Language, Translations> = {
-  en: {
+const enDict: Translations = {
     // Navigation & Branding
     brandName: 'Density Calculator (ρ = m/V)',
     brandTagline: 'Mass, Volume & Density Physics Solver',
@@ -314,7 +313,8 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     footerDesc: 'Designed for STEM education, physics students, and engineering professionals. Fully compliant with International System of Units (SI).',
     seoGuideBtn: 'Google Indexing & Monetization Playbook',
   },
-  zh: {
+
+const zhDict: Translations = {zh: {
     // Navigation & Branding
     brandName: '密度计算器 (ρ = m/V)',
     brandTagline: '质量、体积与密度物理在线换算器',
@@ -470,4 +470,13 @@ export const TRANSLATIONS: Record<Language, Translations> = {
     footerDesc: '严格遵循国际单位制 (SI) 与中学/大学物理计算标准。适合学生、教师及工程技术人员。',
     seoGuideBtn: 'Google收录与流量变现指引 (SEO/AdSense)',
   },
+
+};
+
+export const TRANSLATIONS: Record<Language, Translations> = {
+  en: enDict,
+  es: { ...enDict },
+  fr: { ...enDict },
+  pt: { ...enDict },
+  zh: zhDict,
 };
