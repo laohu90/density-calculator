@@ -11,20 +11,30 @@ import { SEOFAQ } from './components/SEOFAQ';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { GoogleSEOChecklistModal } from './components/GoogleSEOChecklistModal';
 import { Substance, CalculationMode } from './types/density';
-import { Language, TRANSLATIONS } from './i18n/translations';
+import { Language, SupportedLang, TRANSLATIONS, resolveInitialLanguage } from './i18n/translations';
 import { Sparkles, ShieldCheck } from 'lucide-react';
 
 export default function App() {
   // Default to English as requested
-  const [lang, setLang] = useState<Language>(() => {
-    try {
-      const saved = localStorage.getItem('density_calculator_pref_lang');
-      if (saved === 'zh' || saved === 'en') return saved;
-    } catch {
-      // safe fallback if storage is restricted
-    }
-    return 'en';
+  const [langState, setLangState] = useState<{ currentLang: SupportedLang; isAuto: boolean }>(() => {
+    const init = resolveInitialLanguage();
+    return { currentLang: init.lang, isAuto: init.isAuto };
   });
+  const lang = langState.currentLang;
+  const isAuto = langState.isAuto;
+  const setLang = (newLangOrFn: Language | ((prev: Language) => Language)) => {
+    setLangState((prev) => {
+      const next = typeof newLangOrFn === 'function' ? newLangOrFn(prev.currentLang) : newLangOrFn;
+      try {
+        localStorage.setItem('density_calc_user_chosen_lang_v3', next);
+        localStorage.removeItem('density_calculator_pref_lang');
+      } catch {}
+      const url = new URL(window.location.href);
+      url.searchParams.set('lang', next);
+      window.history.pushState({}, '', url.toString());
+      return { currentLang: next, isAuto: false };
+    });
+  };
 
   const [activeTab, setActiveTab] = useState<
     CalculationMode | 'materials' | 'problems' | 'spectrum' | 'knowledge'

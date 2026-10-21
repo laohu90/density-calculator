@@ -1,4 +1,5 @@
 export type Language = 'en' | 'es' | 'fr' | 'pt' | 'zh';
+export type SupportedLang = Language;
 
 export interface Translations {
   // Navigation & Branding
@@ -312,9 +313,9 @@ const enDict: Translations = {
     // Footer
     footerDesc: 'Designed for STEM education, physics students, and engineering professionals. Fully compliant with International System of Units (SI).',
     seoGuideBtn: 'Google Indexing & Monetization Playbook',
-  },
+  };
 
-const zhDict: Translations = {zh: {
+const zhDict: Translations = {
     // Navigation & Branding
     brandName: '密度计算器 (ρ = m/V)',
     brandTagline: '质量、体积与密度物理在线换算器',
@@ -469,9 +470,7 @@ const zhDict: Translations = {zh: {
     // Footer
     footerDesc: '严格遵循国际单位制 (SI) 与中学/大学物理计算标准。适合学生、教师及工程技术人员。',
     seoGuideBtn: 'Google收录与流量变现指引 (SEO/AdSense)',
-  },
-
-};
+  };
 
 export const TRANSLATIONS: Record<Language, Translations> = {
   en: enDict,
@@ -480,3 +479,68 @@ export const TRANSLATIONS: Record<Language, Translations> = {
   pt: { ...enDict },
   zh: zhDict,
 };
+export const translations = TRANSLATIONS;
+
+export interface BrowserDetectionResult {
+  detected: SupportedLang;
+  rawLocale: string;
+  source: 'browser' | 'default';
+}
+
+export function getBrowserLanguageInfo(): BrowserDetectionResult {
+  if (typeof window === 'undefined') {
+    return { detected: 'en', rawLocale: 'en', source: 'default' };
+  }
+  const rawList: string[] = [];
+  if (Array.isArray(navigator.languages) && navigator.languages.length > 0) {
+    rawList.push(...navigator.languages);
+  }
+  if (navigator.language) {
+    rawList.push(navigator.language);
+  }
+  const primaryRaw = rawList[0] || 'en';
+  for (const raw of rawList) {
+    const l = raw.toLowerCase().trim();
+    if (l.startsWith('zh')) return { detected: 'zh', rawLocale: primaryRaw, source: 'browser' };
+    if (l.startsWith('es')) return { detected: 'es', rawLocale: primaryRaw, source: 'browser' };
+    if (l.startsWith('fr')) return { detected: 'fr', rawLocale: primaryRaw, source: 'browser' };
+    if (l.startsWith('pt')) return { detected: 'pt', rawLocale: primaryRaw, source: 'browser' };
+    if (l.startsWith('en')) return { detected: 'en', rawLocale: primaryRaw, source: 'browser' };
+  }
+  return { detected: 'en', rawLocale: primaryRaw, source: 'default' };
+}
+
+export function resolveInitialLanguage(): {
+  lang: SupportedLang;
+  isAuto: boolean;
+  detectedLang: SupportedLang;
+  rawLocale: string;
+} {
+  const browserInfo = getBrowserLanguageInfo();
+  if (typeof window === 'undefined') {
+    return { lang: 'en', isAuto: true, detectedLang: 'en', rawLocale: 'en' };
+  }
+  try {
+    localStorage.removeItem('density_calc_lang');
+    localStorage.removeItem('density_calc_pref_lang');
+    localStorage.removeItem('density_calc_manual_lang');
+  } catch {}
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const pLang = params.get('lang') as SupportedLang;
+    if (pLang && ['en', 'es', 'fr', 'pt', 'zh'].includes(pLang)) {
+      return { lang: pLang, isAuto: false, detectedLang: browserInfo.detected, rawLocale: browserInfo.rawLocale };
+    }
+  } catch {}
+
+  try {
+    const manual = localStorage.getItem('density_calc_user_chosen_lang_v3') as SupportedLang;
+    if (manual && ['en', 'es', 'fr', 'pt', 'zh'].includes(manual)) {
+      return { lang: manual, isAuto: false, detectedLang: browserInfo.detected, rawLocale: browserInfo.rawLocale };
+    }
+  } catch {}
+
+  // Strict default is English ('en') for Google SEO & global accessibility
+  return { lang: 'en', isAuto: true, detectedLang: browserInfo.detected, rawLocale: browserInfo.rawLocale };
+}
