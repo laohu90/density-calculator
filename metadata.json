@@ -1,0 +1,6 @@
+{
+  "name": "FormulaCalcKit - Precision Formula & Scientific Calculator Hub",
+  "description": "High-precision scientific and mathematical formula computing workstation featuring interactive step-by-step solvers, radical simplifications, and comprehensive STEM formula directory.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
